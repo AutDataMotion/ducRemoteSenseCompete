@@ -14,7 +14,7 @@ class CompetitionSerializer(serializers.ModelSerializer):
 class ResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = Result
-        fields = ("rid", "time_stamp", "score", "competition_id", "team_id", "is_review")
+        fields = ("rid", "time_stamp", "score", "competition_id", "team_id", "is_review", "user_id")
 
 class TeamSerializer(serializers.ModelSerializer):
     class Meta:

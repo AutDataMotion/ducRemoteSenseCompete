@@ -32,6 +32,7 @@ class Result(models.Model):
     score = models.FloatField()
     competition_id = models.ForeignKey(to="Competition", on_delete=models.CASCADE, to_field="cid")
     team_id = models.ForeignKey(to="Team", on_delete=models.CASCADE, to_field="tid")
+    user_id = models.OneToOneField(to="User", on_delete=models.CASCADE, to_field='uid', default="")
     is_review = models.BooleanField()
 
 class Team(models.Model):

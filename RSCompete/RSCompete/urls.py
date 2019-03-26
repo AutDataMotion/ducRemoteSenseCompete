@@ -19,5 +19,7 @@ from RSCompeteAPI.views import *
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('competition/', competitionList),
+    path('competition', competitionList),
+    path('users/login', login),
+    path("users", users),
 ]
