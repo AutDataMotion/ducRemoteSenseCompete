@@ -22,4 +22,7 @@ urlpatterns = [
     path('competition', competitionList),
     path('users/login', login),
     path("users", users),
+    path("users/register", register),
+    path("test", test),
+    path("users/logout", logout),
 ]
