@@ -16,7 +16,7 @@ import os
 import time
 import traceback
 
-from tasks import add, mul
+from RSCompeteAPI.tasks import add, mul, wtf
 #3代表有某种属性重复
 status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6}
 #TODO: 文件存放根目录,待更改为从系统设置表中读入
@@ -299,9 +299,10 @@ def count(request):
 
 @api_view(["POST"])
 def test(request):
-    team = Team.objects.get(pk=15)
+    team = Team.objects.get(pk=29)
     add.delay(4,4)
     mul.delay(4,4)
+    wtf.delay("abc")
     #team.delete()
     return standard_response("ok","")
 

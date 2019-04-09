@@ -1,3 +1,4 @@
+from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 
 
@@ -10,3 +11,7 @@ def mul(x, y):
 @shared_task
 def xsum(numbers):
     return sum(numbers)
+
+@shared_task
+def wtf(s):
+    return s
