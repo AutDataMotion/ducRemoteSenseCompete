@@ -27,4 +27,5 @@ urlpatterns = [
     path("users/logout", logout),
     path("count", count),
     path("results", results),
+    path("results/leaderboard", leaderboard),
 ]

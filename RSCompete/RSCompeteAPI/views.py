@@ -52,6 +52,53 @@ def competitionList(request):
                 return JsonResponse({"status":"error"}, status=status.HTTP_400_BAD_REQUEST, safe=False, json_dumps_params={"ensure_ascii":False})
             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, json_dumps_params={"ensure_ascii":False})
         return JsonResponse({"status":serializer.errors}, status=status.HTTP_400_BAD_REQUEST, json_dumps_params={"ensure_ascii":False})
+@api_view(["GET"])
+def leaderboard(request):
+    #TODO: 每天一榜，为了提高效率可以写到文件中
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    if "competition_id" in json_dic:
+        try:
+            competition = Competition.objects.get(pk=json_dic["competition_id"])
+            teams = competition.team_set.all() 
+        except Competition.DoesNotExist:
+            #若传入竞赛ID错误，则直接返回所有竞赛
+            teams = Team.objects.all()
+    else:
+        teams = Team.objects.all()
+    results = []
+    results_teams = []
+    for team in teams:
+        team_results = team.result_set.all().order_by("-score")
+        if len(team_results) > 0:
+            results.append(team_results[0])
+            results_teams.append(team)
+    if "page" in json_dic:
+        if "number" in json_dic:
+            number = int(json_dic["number"])
+        else:
+            number = 25
+        results_paginator = Paginator(results, number)
+        teams_paginator = Paginator(results_teams, number)
+        page = int(json_dic["page"])
+        try:
+            page_results = results_paginator.page(page)
+            page_teams = teams_paginator.page(page)
+        except PageNotAnInteger:
+            page_results = results_paginator.page(1)
+            page_teams = teams_paginator.page(1)
+        except EmptyPage:
+            page_results = results_paginator.page(results_paginator.num_pages)
+            page_teams = teams_paginator.page(teams_paginator.num_pages)
+        serializer = ResultSerializer(page_results, many=True)
+        teams_serializer = TeamSerializer(page_teams, many=True)
+        return standard_response(status_code["ok"],"",{"results":serializer.data, "page_count":results_paginator.num_pages, "teams": teams_serializer.data})
+    else:
+        serializer = ResultSerializer(results, many=True)
+        teams_serializer = TeamSerializer(results_teams, many=True)
+        return standard_response(status_code["ok"], "", {"results":serializer.data, 'teams': teams_serializer.data})
+
 
 @api_view(["GET", "POST"])
 def results(request):
