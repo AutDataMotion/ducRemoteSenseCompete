@@ -15,6 +15,8 @@ from RSCompeteAPI.serializers import UserSerializer, CompetitionSerializer, Resu
 import os
 import time
 import traceback
+
+from tasks import add, mul
 #3代表有某种属性重复
 status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6}
 #TODO: 文件存放根目录,待更改为从系统设置表中读入
@@ -92,7 +94,7 @@ def results(request):
             #TODO: 上传文件成功需要加入任务调度功能
             #TODO: 上传文件应该是一个压缩包，需要解压缩操作
             return standard_response(status_code["ok"],"", {"result_info":serializer.data})
-                
+              
         else:
             return standard_response(status_code["not_login"], "尚未登录")
     elif request.method == "GET":
@@ -298,7 +300,9 @@ def count(request):
 @api_view(["POST"])
 def test(request):
     team = Team.objects.get(pk=15)
-    team.delete()
+    add.delay(4,4)
+    mul.delay(4,4)
+    #team.delete()
     return standard_response("ok","")
 
 @api_view(["POST"])

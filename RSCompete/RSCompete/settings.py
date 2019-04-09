@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'RSCompeteAPI',
+    'django_celery_results',
 
 ]
 
@@ -128,3 +129,8 @@ APPEND_SLASH=False
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+CELERY_RESULT_BACKEND = 'django-db'
+
+BROKER_URL = 'amqp://guest@localhost//'
