@@ -28,12 +28,13 @@ class Competition(models.Model):
 class Result(models.Model):
     #rid = models.IntegerField(primary_key=True)
     #此处可以改为timefield，目前存储为unix时间戳
-    time_stamp = models.IntegerField()
-    score = models.FloatField()
+    time_stamp = models.BigIntegerField()
+    
+    score = models.FloatField(default=-1.)
     competition_id = models.ForeignKey(to="Competition", on_delete=models.CASCADE)
     team_id = models.ForeignKey(to="Team", on_delete=models.CASCADE)
-    user_id = models.OneToOneField(to="User", on_delete=models.CASCADE)
-    is_review = models.BooleanField()
+    user_id = models.ForeignKey(to="User", on_delete=models.CASCADE)
+    is_review = models.BooleanField(default=False)
 
 class Team(models.Model):
     #tid = models.IntegerField(primary_key=True)

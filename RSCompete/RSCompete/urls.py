@@ -25,4 +25,6 @@ urlpatterns = [
     path("users/register", register),
     path("test", test),
     path("users/logout", logout),
+    path("count", count),
+    path("results", results),
 ]
