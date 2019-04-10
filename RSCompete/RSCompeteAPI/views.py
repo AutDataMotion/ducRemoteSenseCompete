@@ -55,6 +55,7 @@ def competitionList(request):
 @api_view(["GET"])
 def leaderboard(request):
     #TODO: 每天一榜，为了提高效率可以写到文件中
+    #FIXME: 若未传入竞赛id则返回的排行榜应该按照竞赛进行分类
     content = JSONRenderer().render(request.GET)
     stream = BytesIO(content)
     json_dic = JSONParser().parse(stream)
@@ -291,14 +292,14 @@ def register(request):
             return standard_response(status_code["error"], "未知参数")
     else:
         #TODO: 队员注册
-        if "team_id" in json_dic and "competition_id" in json_dic:
+        if "team_id" in json_dic:
             try:
                 team = Team.objects.get(pk=json_dic["team_id"])
             except Exception as e:
                 return standard_response(status_code['error'], "%s"%traceback.format_exc())
-            
-            if not team.competition_id.pk == int(json_dic["competition_id"]):
-                return standard_response(status_code['error'], "队伍与队员传入的竞赛不同")
+            if "competition_id" in json_dic:
+                if not team.competition_id.pk == int(json_dic["competition_id"]):
+                    return standard_response(status_code['error'], "队伍与队员传入的竞赛不同")
             #TODO: 获取当前已经在该队伍中的人员数
             team_members = team.user_set.all()
             if len(team_members) > 4:#先设定为4，该设定之后写入system_config表中
@@ -328,7 +329,7 @@ def register(request):
                 return standard_response(status_code["user_repeat"], "查询各个信息是否唯一")
 
         else:
-            return standard_response(status_code["error"], "传入参数不足(team_id or competition_id)")
+            return standard_response(status_code["error"], "传入参数不足(team_id)")
 
 @api_view(["GET"])
 def count(request):
