@@ -19,6 +19,11 @@ class User(models.Model):
     team_id = models.ForeignKey(to="Team", on_delete=models.CASCADE)
     competition_id = models.ForeignKey(to="Competition", on_delete=models.CASCADE)
 
+# class SystemConfig(models.Model):
+#     result_root_dir = models.CharField(max_length=128, default="../results")
+#     team_member_number = models.IntegerField(default=5)
+
+
 class Competition(models.Model):
     #cid = models.IntegerField(primary_key=True)
     announcement = models.TextField()

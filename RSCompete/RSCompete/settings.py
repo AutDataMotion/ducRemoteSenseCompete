@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'RSCompeteAPI',
     'django_celery_results',
-
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
@@ -130,6 +130,7 @@ APPEND_SLASH=False
 
 STATIC_URL = '/static/'
 
+CRONJOBS = [('0 1 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> ./test.log"),]
 
 CELERY_RESULT_BACKEND = 'django-db'
 
