@@ -103,7 +103,7 @@ def leaderboard(request):
             # return standard_response(status_code["not_exist"], "排行榜维护中")
             #FIXME: 该处时间与定时任务时间时区不一致
             now = time.localtime()
-            now.tm_mday -= 1
+            # now.tm_mday -= 1
             file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", now), str(cid), "leaderboard.json")
             try:
                 with open(file_path,"r") as f:
@@ -111,30 +111,39 @@ def leaderboard(request):
             except IOError as e:
                 return standard_response(status_code["not_exist"], "排行榜维护中")
         results = file_jsondic["results"]
-        teams = file_jsondic["teams"]
-        if "page" in json_dic:
-            if "number" in json_dic:
-                number = int(json_dic["number"])
+        #处理搜索的情况
+        if "team_name" in json_dic:
+            #这个数组最大是该赛题队伍的数量, 可以直接线性遍历
+            for result in results:
+                if result["team_name"] == json_dic["team_name"]:
+                    return standard_response(status_code["ok"],"", {"list":[result]})
+            return standard_response(status_code["ok"], "", {"list":[]})
+        #处理非搜索情况
+        if "pageId" in json_dic:
+            if "pageSize" in json_dic:
+                number = int(json_dic["pageSize"])
             else:
-                number = 25
+                number = 30
             results_paginator = Paginator(results, number)
-            teams_paginator = Paginator(teams, number)
-            page = int(json_dic["page"])
+            # teams_paginator = Paginator(teams, number)
+            page = int(json_dic["pageId"])
             try:
                 page_results = results_paginator.page(page)
-                page_teams = teams_paginator.page(page)
+                # page_teams = teams_paginator.page(page)
             except PageNotAnInteger:
                 page_results = results_paginator.page(1)
-                page_teams = teams_paginator.page(1)
+                page = 1
+                # page_teams = teams_paginator.page(1)
             except EmptyPage:
                 page_results = results_paginator.page(results_paginator.num_pages)
-                page_teams = teams_paginator.page(teams_paginator.num_pages)
+                page = results_paginator.num_pages
+                # page_teams = teams_paginator.page(teams_paginator.num_pages)
             #print(page_results.object_list)
             # serializer = ResultSerializer(data=page_results, many=True)
             # teams_serializer = TeamSerializer(data=page_teams, many=True)
-            return standard_response(status_code["ok"],"",{"results":page_results.object_list, "page_count":results_paginator.num_pages, "teams": page_teams.object_list})
+            return standard_response(status_code["ok"],"",{"list":page_results.object_list, "pageId":page, "pageSize":number, "total":len(results)})
         else:
-            return standard_response(status_code["ok"], "", {"results":results, 'teams': teams})
+            return standard_response(status_code["ok"], "", {"list":results, "total": len(results)})
 
     else:
         return standard_response(status_code["error"], "必须指定需要获取排行榜的竞赛id")
@@ -258,13 +267,13 @@ def results(request):
             content = JSONRenderer().render(request.GET)
             stream = BytesIO(content)
             json_dic = JSONParser().parse(stream)
-            if "page_Id" in json_dic:
-                if "page_Size" in json_dic:
-                    number = int(json_dic["page_Size"])
+            if "pageId" in json_dic:
+                if "pageSize" in json_dic:
+                    number = int(json_dic["pageSize"])
                 else:
                     number = 30
                 results_paginator = Paginator(results, number)
-                page = int(json_dic["page_Id"])
+                page = int(json_dic["pageId"])
                 try:
                     page_results = results_paginator.page(page)
                 except PageNotAnInteger:
@@ -276,7 +285,7 @@ def results(request):
                 serializer = ResultSerializer(page_results, many=True)
                 today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
                 remain = upload_perday - today_results_count
-                return standard_response(status_code["ok"],"",{"results":serializer.data, "total": results_count, "page_Id": page, "page_Size": number, "today_remain": remain})
+                return standard_response(status_code["ok"],"",{"results":serializer.data, "total": results_count, "pageId": page, "pageSize": number, "today_remain": remain})
             else:
                 serializer = ResultSerializer(results, many=True)
                 today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
