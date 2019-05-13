@@ -6,9 +6,8 @@ class UserSerializer(serializers.ModelSerializer):
     ID_card = serializers.CharField(max_length=18)
     email = serializers.CharField(max_length=64)
     class Meta:
-        
         model = User
-        fields = ("name", "password", "country", "province", "city", "work_id", "work_place", "phone_number", "ID_card", "email", "is_captain", "team_id", "competition_id")
+        fields = ("name", "password", "country", "province", "city", "work_id", "work_place_top", "work_place_second", "work_place_third", "phone_number", "ID_card", "email", "is_captain", "team_id", "competition_id")
         validators = []
     def validate_phone_number(self, phone_number):
         try:
@@ -87,9 +86,9 @@ class CompetitionSerializer(serializers.ModelSerializer):
 class ResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = Result
-        fields = ("time_stamp", "score", "competition_id", "team_id", "is_review", "user_id")
+        fields = ("time_stamp", "score", "competition_id", "team_id", "is_review", "user_id", "root_dir", "file_name")
 
 class TeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
-        fields = ("team_name", "captain_name", "competition_id")
+        fields = ("team_name", "captain_name", "competition_id", "invite_code")

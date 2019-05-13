@@ -3,7 +3,7 @@ from RSCompeteAPI.models import User, Competition, Result, Team
 from django.http import HttpResponse, JsonResponse
 from django.utils.six import BytesIO
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-
+from django.core.mail import send_mail, send_mass_mail
 
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
@@ -18,13 +18,40 @@ import time
 import traceback
 import json
 from RSCompeteAPI.default_settings import System_Config
-from RSCompeteAPI.tasks import add, mul, wtf
+from RSCompeteAPI.tasks import add, mul, wtf, scene_classification
+
 #3代表有某种属性重复
 status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6,"not_exist":7}
+#加入竞赛id与竞赛项目的区分
+competition_dict = {1:"scene_classification"}
+
 #TODO: 从系统设置中读入设置
 root_dir = System_Config.result_root_dir
 team_member_number = System_Config.team_member_number
 leadboard_root_dir = System_Config.leader_board_root_dir
+scene_classification_gt = System_Config.scene_classification_gt
+upload_perday = System_Config.upload_count_perday
+import random
+import string
+
+def generate_random_str(randomlength=16):
+    """
+    生成一个指定长度的随机字符串，其中
+    string.digits=0123456789
+    string.ascii_letters=abcdefghigklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+    """
+    str_list = [random.choice(string.digits + string.ascii_letters) for i in range(randomlength)]
+    random_str = ''.join(str_list)
+    return random_str
+def get_time_range():
+    #FIXME: 还是需要注意一下时区的问题
+    dt = time.strftime("%Y-%m-%d", time.localtime())
+    
+    begin_time = dt + "00:00:00"
+    end_time = dt + "23:59:59"
+    begin_time_stamp = time.mktime(time.strptime(begin_time, "%Y-%m-%d%H:%M:%S"))
+    end_time_stamp = time.mktime(time.strptime(end_time, "%Y-%m-%d%H:%M:%S"))
+    return int(round(begin_time_stamp * 1000)), int(round(end_time_stamp * 1000))
 
 def standard_response(status, message, data=None):
     if data == None:
@@ -73,7 +100,16 @@ def leaderboard(request):
             with open(file_path,"r") as f:
                 file_jsondic = json.load(f)
         except IOError as e:
-            return standard_response(status_code["not_exist"], "排行榜维护中")
+            # return standard_response(status_code["not_exist"], "排行榜维护中")
+            #FIXME: 该处时间与定时任务时间时区不一致
+            now = time.localtime()
+            now.tm_mday -= 1
+            file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", now), str(cid), "leaderboard.json")
+            try:
+                with open(file_path,"r") as f:
+                    file_jsondic = json.load(f)
+            except IOError as e:
+                return standard_response(status_code["not_exist"], "排行榜维护中")
         results = file_jsondic["results"]
         teams = file_jsondic["teams"]
         if "page" in json_dic:
@@ -157,7 +193,11 @@ def results(request):
                 return standard_response(status_code["not_login"], "尚未登录")
             competition = user.competition_id
             team = user.team_id
-            
+            begin_time_stamp, end_time_stamp = get_time_range()
+            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            remain = upload_perday - today_results_count
+            if remain == 0:
+                return standard_response(status_code["error"], "今日上传次数已满")
             file_obj = request.FILES.get("file")
             if file_obj is None:
                 return standard_response(status_code["error"], "%s"%traceback.format_exc())
@@ -176,21 +216,33 @@ def results(request):
                 return standard_response(status_code["error"], "%s"%traceback.format_exc())
             finally:
                 f.close()
-            result = Result(time_stamp=int(unix_time), score=-1., competition_id=competition, team_id=team, user_id=user, is_review=False)
+            result = Result(time_stamp=int(unix_time), score=-1., competition_id=competition, team_id=team, user_id=user, is_review=False, root_dir=file_path, file_name=file_obj.name)
             serializer = ResultSerializer(result)
             try:
                 result.save()
             except Exception as e:
                 return standard_response(status_code["error"], "%s"%traceback.format_exc())
-            #TODO: 上传文件成功需要加入任务调度功能
-            #TODO: 上传文件应该是一个压缩包，需要解压缩操作
-            return standard_response(status_code["ok"],"", {"result_info":serializer.data})
+            else:
+                #再进行检查目前的已经上传的数量，防止并发出现的超出上传上限
+                today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+                remain = upload_perday - today_results_count
+                if remain < 0:
+                    result.delete()
+                    return standard_response(status_code["error"], "今日上传次数已满")
+                #TODO: 上传文件成功需要加入任务调度功能
+                #TODO: 上传文件应该是一个压缩包，需要解压缩操作
+                #FIXME: 加入场景分类作为测试
+                scene_classification.delay(file_path, scene_classification_gt, result.pk)
+            
+                return standard_response(status_code["ok"],"", {"result_info":serializer.data})
               
         else:
             return standard_response(status_code["not_login"], "尚未登录")
     elif request.method == "GET":
         if "user" in request.session:
             user = request.session["user"]
+            begin_time_stamp, end_time_stamp = get_time_range()
+            
             try:
                 user = User.objects.get(phone_number=user["phone_number"])
             except User.DoesNotExist:
@@ -199,30 +251,40 @@ def results(request):
             team = user.team_id
             #上传的结果以队伍为单位返回并按照时间降序排列
             results = team.result_set.all().order_by("-time_stamp")
+            results_count = results.count()
+            # print(results_count)
+            # if results_count == 0:
+            #     return standard_response(status_code["ok"], "", {"results":[], "total": results_count})
             content = JSONRenderer().render(request.GET)
             stream = BytesIO(content)
             json_dic = JSONParser().parse(stream)
-            if "page" in json_dic:
-                if "number" in json_dic:
-                    number = int(json_dic["number"])
+            if "page_Id" in json_dic:
+                if "page_Size" in json_dic:
+                    number = int(json_dic["page_Size"])
                 else:
-                    number = 25
+                    number = 30
                 results_paginator = Paginator(results, number)
-                page = int(json_dic["page"])
+                page = int(json_dic["page_Id"])
                 try:
                     page_results = results_paginator.page(page)
                 except PageNotAnInteger:
                     page_results = results_paginator.page(1)
+                    page = 1
                 except EmptyPage:
                     page_results = results_paginator.page(results_paginator.num_pages)
+                    page = results_paginator.num_pages
                 serializer = ResultSerializer(page_results, many=True)
-                return standard_response(status_code["ok"],"",{"results":serializer.data, "page_count":results_paginator.num_pages})
+                today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+                remain = upload_perday - today_results_count
+                return standard_response(status_code["ok"],"",{"results":serializer.data, "total": results_count, "page_Id": page, "page_Size": number, "today_remain": remain})
             else:
                 serializer = ResultSerializer(results, many=True)
-                return standard_response(status_code["ok"], "", {"results":serializer.data})
+                today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+                remain = upload_perday - today_results_count
+                return standard_response(status_code["ok"], "", {"results":serializer.data, "total": results_count, "today_remain": remain})
         else:
             return standard_response(status_code["not_login"], "尚未登录")
-
+#TODO: 登录成功返回队伍信息，队伍名等
 @api_view(["POST"])
 def login(request):
     if request.method == "POST":
@@ -301,7 +363,11 @@ def register(request):
     if json_dic["is_captain"] == "1":
         #队长注册
         #print(json_dic["work_id"])
-        if json_dic['work_id'] in ['1','2','3','4']:
+        if not "competition_id" in json_dic:
+            return standard_response(status_code["error"], "必须制定竞赛项目")
+        if not "team_name" in json_dic:
+            return standard_response(status_code["error"], "必须指定队伍名称")
+        if json_dic['work_id'] in ['1','2','3','4','5']:
             try:
                 competition = Competition.objects.get(pk=json_dic["competition_id"])
             except:
@@ -310,11 +376,21 @@ def register(request):
             try:
                 Team.objects.get(team_name=json_dic["team_name"])
             except Team.DoesNotExist:
-                team = Team(team_name=json_dic['team_name'], competition_id=competition, captain_name=json_dic['name'])
-                try:
-                    team.save()
-                except Exception as e:
-                    return standard_response(status_code["error"], "%s"%traceback.format_exc())
+               
+                while True:
+                    try:
+                        invite_code = generate_random_str(4)
+                        Team.objects.get(invite_code=invite_code)
+                    except Team.DoesNotExist:
+                        team = Team(team_name=json_dic['team_name'], competition_id=competition, captain_name=json_dic['name'], invite_code=invite_code)
+                        try:
+                            team.save()
+                        except Exception as e:
+                            return standard_response(status_code["error"], "%s"%traceback.format_exc())
+                        finally:
+                            break
+                
+
             else:
                 return standard_response(status_code["team_repeat"], "队伍名称重复")
             
@@ -343,17 +419,21 @@ def register(request):
                     team.delete()
                     return standard_response(status_code["user_repeat"], "%s"%traceback.format_exc())
                     #创建失败队伍也不应该被创建
-                request.session["user"] = serializer.data
-                return standard_response(status_code["ok"],"", {"user_info":serializer.data})
+                else:
+                    request.session["user"] = serializer.data
+                    #TODO: 注册成功向注册邮箱发送邮件
+                    
+                    send_mail("恭喜你成功报名参加本届比赛", "队伍邀请码为{}".format(team.invite_code), "a464430440@163.com", [serializer.data["email"]], fail_silently=False)
+                    return standard_response(status_code["ok"],"", {"user_info":serializer.data})
         else:
-            return standard_response(status_code["error"], "未知参数")
+            return standard_response(status_code["error"], "未选择正确的工作身份")
     else:
-        #TODO: 队员注册
-        if "team_id" in json_dic:
+        #TODO: 队员注册, 传入的属性为邀请码(team_id->invite_code)
+        if "invite_code" in json_dic:
             try:
-                team = Team.objects.get(pk=json_dic["team_id"])
+                team = Team.objects.get(invite_code=json_dic["invite_code"])
             except Team.DoesNotExist:
-                return standard_response(status_code["not_exist"], "队伍代码错误，无此队伍")
+                return standard_response(status_code["not_exist"], "邀请码错误，无此队伍")
             if "competition_id" in json_dic:
                 if not team.competition_id.pk == int(json_dic["competition_id"]):
                     return standard_response(status_code['error'], "队伍与队员传入的竞赛不同")
@@ -364,7 +444,7 @@ def register(request):
 
             json_dic["team_name"] = team.team_name
             json_dic["competition_id"] = team.competition_id.pk
-            
+            json_dic['team_id'] = team.pk
             try:
                 serializer = UserSerializer(data=json_dic)
             except:
@@ -380,7 +460,7 @@ def register(request):
                     serializer.save()
                 except:
                     return standard_response(status_code["error"], "%s"%traceback.format_exc())
-                team = Team.objects.get(pk=json_dic["team_id"])
+                team = Team.objects.get(invite_code=json_dic["invite_code"])
                 #TODO: 保存后再次判断队伍人数
                 team_members = team.user_set.all()
                 
@@ -390,8 +470,8 @@ def register(request):
                 request.session["user"] = serializer.data
                 return standard_response(status_code["ok"],"", {"user_info":serializer.data}) 
         else:
-            return standard_response(status_code["error"], "传入参数不足(team_id)")
-
+            return standard_response(status_code["error"], "未提供邀请码(invite_code)")
+#传入竟赛id，返回指定竟赛的统计信息
 @api_view(["GET"])
 def count(request):
     count_array = []

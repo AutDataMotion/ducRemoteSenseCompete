@@ -4,3 +4,5 @@ class System_Config():
     result_root_dir = "../results"
     team_member_number = 5
     leader_board_root_dir = "/media/xuan/新加卷/code/ducRemoteSenseCompete/leadboard"
+    scene_classification_gt = "/media/xuan/新加卷/code/NSFC接口/NSFC_contest/scene_classification_gt"
+    upload_count_perday = 5

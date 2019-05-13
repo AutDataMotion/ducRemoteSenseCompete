@@ -4,14 +4,17 @@ import time
 from RSCompeteAPI.default_settings import System_Config
 import os
 import json
+from datetime import datetime
 def test():
     with open("./test","w") as f:
         f.write("fuck you")
 
 def generate_leaderboard():
     root_dir = System_Config.leader_board_root_dir
-    print(time.strftime("%Y-%m-%d", time.localtime()))
+    print(time.strftime("%Y-%m-%d-%H", time.localtime()))
+    #FIXME: 此处定时任务的时区与系统时区不一致
     file_path = os.path.join(root_dir, time.strftime("%Y-%m-%d", time.localtime()))
+    #file_path = os.path.join(root_dir, datetime.utcnow)
     # if not os.path.exists(file_path):
     #     os.makedirs(file_path)
     competitions = Competition.objects.all()
