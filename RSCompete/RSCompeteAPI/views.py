@@ -31,6 +31,8 @@ team_member_number = System_Config.team_member_number
 leadboard_root_dir = System_Config.leader_board_root_dir
 scene_classification_gt = System_Config.scene_classification_gt
 upload_perday = System_Config.upload_count_perday
+current_stage = System_Config.current_stage
+
 import random
 import string
 
@@ -490,7 +492,7 @@ def count(request):
         teams_number = len(teams)
         users = competition.user_set.all()
         users_number = len(users)
-        count_array.append({competition.pk:{"teams_number":str(teams_number), "users_number":str(users_number)}})
+        count_array.append({competition.pk:{"teams_number":str(teams_number), "users_number":str(users_number), "current_stage": current_stage}})
         #TODO: 是否增加已经提交的结果数量
     
     return standard_response(status_code["ok"],"",count_array)
