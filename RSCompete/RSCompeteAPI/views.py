@@ -21,7 +21,7 @@ from RSCompeteAPI.default_settings import System_Config
 from RSCompeteAPI.tasks import add, mul, wtf, scene_classification
 
 #3代表有某种属性重复
-status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6,"not_exist":7}
+status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6,"not_exist":7, "unknown_error":8}
 #加入竞赛id与竞赛项目的区分
 competition_dict = {1:"scene_classification"}
 
@@ -32,6 +32,7 @@ leadboard_root_dir = System_Config.leader_board_root_dir
 scene_classification_gt = System_Config.scene_classification_gt
 upload_perday = System_Config.upload_count_perday
 current_stage = System_Config.current_stage
+deadline = System_Config.deadline
 
 import random
 import string
@@ -148,7 +149,7 @@ def leaderboard(request):
             return standard_response(status_code["ok"], "", {"list":results, "total": len(results)})
 
     else:
-        return standard_response(status_code["error"], "必须指定需要获取排行榜的竞赛id")
+        return standard_response(status_code["error"], "必须指定需要获取排行榜的竞赛类型")
     # if "competition_id" in json_dic:
     #     try:
     #         competition = Competition.objects.get(pk=json_dic["competition_id"])
@@ -189,112 +190,108 @@ def leaderboard(request):
     #     serializer = ResultSerializer(results, many=True)
     #     teams_serializer = TeamSerializer(results_teams, many=True)
     #     return standard_response(status_code["ok"], "", {"results":serializer.data, 'teams': teams_serializer.data})
-
-
-@api_view(["GET", "POST"])
-def results(request):
-    if request.method == "POST":
-        #处理文件的上传
+@api_view(["POST"])
+def results_upload(request):
+    if "user" in request.session:
+        user = request.session["user"]
+        try:
+            user = User.objects.get(phone_number=user["phone_number"])
+        except User.DoesNotExist:
+            return standard_response(status_code["not_login"], "尚未登录")
+        competition = user.competition_id
+        team = user.team_id
+        begin_time_stamp, end_time_stamp = get_time_range()
+        today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+        remain = upload_perday - today_results_count
+        if remain == 0:
+            return standard_response(status_code["error"], "今日上传次数已满")
+        file_obj = request.FILES.get("file")
+        if file_obj is None:
+            return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
         
-        if "user" in request.session:
-            user = request.session["user"]
-            try:
-                user = User.objects.get(phone_number=user["phone_number"])
-            except User.DoesNotExist:
-                return standard_response(status_code["not_login"], "尚未登录")
-            competition = user.competition_id
-            team = user.team_id
-            begin_time_stamp, end_time_stamp = get_time_range()
+        unix_time = str(int(round(time.time() * 1000)))
+        #TODO: 添加创建目录
+        file_path = os.path.join(root_dir, str(competition.pk), str(team.pk), unix_time)
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
+        
+        f = open(os.path.join(file_path, file_obj.name),"wb") 
+        try:
+            for chunk in file_obj.chunks():
+                f.write(chunk)
+        except Exception as e:
+            return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
+        finally:
+            f.close()
+        result = Result(time_stamp=int(unix_time), score=-1., competition_id=competition, team_id=team, user_id=user, is_review=False, root_dir=file_path, file_name=file_obj.name)
+        serializer = ResultSerializer(result)
+        try:
+            result.save()
+        except Exception as e:
+            return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
+        else:
+            #再进行检查目前的已经上传的数量，防止并发出现的超出上传上限
             today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
             remain = upload_perday - today_results_count
-            if remain == 0:
+            if remain < 0:
+                result.delete()
                 return standard_response(status_code["error"], "今日上传次数已满")
-            file_obj = request.FILES.get("file")
-            if file_obj is None:
-                return standard_response(status_code["error"], "%s"%traceback.format_exc())
-            
-            unix_time = str(int(round(time.time() * 1000)))
-            #TODO: 添加创建目录
-            file_path = os.path.join(root_dir, str(competition.pk), str(team.pk), unix_time)
-            if not os.path.exists(file_path):
-                os.makedirs(file_path)
-            
-            f = open(os.path.join(file_path, file_obj.name),"wb") 
-            try:
-                for chunk in file_obj.chunks():
-                    f.write(chunk)
-            except Exception as e:
-                return standard_response(status_code["error"], "%s"%traceback.format_exc())
-            finally:
-                f.close()
-            result = Result(time_stamp=int(unix_time), score=-1., competition_id=competition, team_id=team, user_id=user, is_review=False, root_dir=file_path, file_name=file_obj.name)
-            serializer = ResultSerializer(result)
-            try:
-                result.save()
-            except Exception as e:
-                return standard_response(status_code["error"], "%s"%traceback.format_exc())
-            else:
-                #再进行检查目前的已经上传的数量，防止并发出现的超出上传上限
-                today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
-                remain = upload_perday - today_results_count
-                if remain < 0:
-                    result.delete()
-                    return standard_response(status_code["error"], "今日上传次数已满")
-                #TODO: 上传文件成功需要加入任务调度功能
-                #TODO: 上传文件应该是一个压缩包，需要解压缩操作
-                #FIXME: 加入场景分类作为测试
-                scene_classification.delay(file_path, scene_classification_gt, result.pk)
-            
-                return standard_response(status_code["ok"],"", {"result_info":serializer.data})
+            #TODO: 上传文件成功需要加入任务调度功能
+            #TODO: 上传文件应该是一个压缩包，需要解压缩操作
+            #FIXME: 加入场景分类作为测试
+            scene_classification.delay(file_path, scene_classification_gt, result.pk)
+        
+            return standard_response(status_code["ok"],"")
               
-        else:
+    else:
+        return standard_response(status_code["not_login"], "尚未登录")
+
+@api_view(["GET"])
+def results(request):
+    if "user" in request.session:
+        user = request.session["user"]
+        begin_time_stamp, end_time_stamp = get_time_range()
+        try:
+            user = User.objects.get(phone_number=user["phone_number"])
+        except User.DoesNotExist:
             return standard_response(status_code["not_login"], "尚未登录")
-    elif request.method == "GET":
-        if "user" in request.session:
-            user = request.session["user"]
-            begin_time_stamp, end_time_stamp = get_time_range()
-            
-            try:
-                user = User.objects.get(phone_number=user["phone_number"])
-            except User.DoesNotExist:
-                return standard_response(status_code["not_login"], "尚未登录")
-            competition = user.competition_id
-            team = user.team_id
-            #上传的结果以队伍为单位返回并按照时间降序排列
-            results = team.result_set.all().order_by("-time_stamp")
-            results_count = results.count()
-            # print(results_count)
-            # if results_count == 0:
-            #     return standard_response(status_code["ok"], "", {"results":[], "total": results_count})
-            content = JSONRenderer().render(request.GET)
-            stream = BytesIO(content)
-            json_dic = JSONParser().parse(stream)
-            if "pageId" in json_dic:
-                if "pageSize" in json_dic:
-                    number = int(json_dic["pageSize"])
-                else:
-                    number = 30
-                results_paginator = Paginator(results, number)
-                page = int(json_dic["pageId"])
-                try:
-                    page_results = results_paginator.page(page)
-                except PageNotAnInteger:
-                    page_results = results_paginator.page(1)
-                    page = 1
-                except EmptyPage:
-                    page_results = results_paginator.page(results_paginator.num_pages)
-                    page = results_paginator.num_pages
-                serializer = ResultSerializer(page_results, many=True)
-                today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
-                remain = upload_perday - today_results_count
-                return standard_response(status_code["ok"],"",{"results":serializer.data, "total": results_count, "pageId": page, "pageSize": number, "today_remain": remain})
+        competition = user.competition_id
+        team = user.team_id
+        #上传的结果以队伍为单位返回并按照时间降序排列
+        results = team.result_set.all().order_by("-time_stamp")
+        results_count = results.count()
+        # print(results_count)
+        # if results_count == 0:
+        #     return standard_response(status_code["ok"], "", {"results":[], "total": results_count})
+        content = JSONRenderer().render(request.GET)
+        stream = BytesIO(content)
+        json_dic = JSONParser().parse(stream)
+        if "pageId" in json_dic:
+            if "pageSize" in json_dic:
+                number = int(json_dic["pageSize"])
             else:
-                serializer = ResultSerializer(results, many=True)
-                today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
-                remain = upload_perday - today_results_count
-                return standard_response(status_code["ok"], "", {"results":serializer.data, "total": results_count, "today_remain": remain})
+                number = 30
+            results_paginator = Paginator(results, number)
+            page = int(json_dic["pageId"])
+            try:
+                page_results = results_paginator.page(page)
+            except PageNotAnInteger:
+                page_results = results_paginator.page(1)
+                page = 1
+            except EmptyPage:
+                page_results = results_paginator.page(results_paginator.num_pages)
+                page = results_paginator.num_pages
+            serializer = ResultSerializer(page_results, many=True)
+            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            remain = upload_perday - today_results_count
+            return standard_response(status_code["ok"],"",{"results":serializer.data, "total": results_count, "pageId": page, "pageSize": number, "today_remain": remain})
         else:
-            return standard_response(status_code["not_login"], "尚未登录")
+            serializer = ResultSerializer(results, many=True)
+            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            remain = upload_perday - today_results_count
+            return standard_response(status_code["ok"], "", {"results":serializer.data, "total": results_count, "today_remain": remain})
+    else:
+        return standard_response(status_code["not_login"], "尚未登录")
 #TODO: 登录成功返回队伍信息，队伍名等
 @api_view(["POST"])
 def login(request):
@@ -331,10 +328,10 @@ def users(request):
             except User.DoesNotExist:
                 return standard_response(status_code["not_login"], "尚未登录")
             team = user.team_id
-            team_members = team.user_set.all()
-            team_members_serializer = UserSerializer(team_members, many=True)
-            serializer = UserSerializer(user, many=False)
-            return standard_response(status_code["ok"], "", data={"user_info": serializer.data, "team_members": team_members_serializer.data})
+            #team_members = team.user_set.all()
+            #team_members_serializer = UserSerializer(team_members, many=True)
+            #serializer = UserSerializer(user, many=False)
+            return standard_response(status_code["ok"], "", data={"user_info": {'name':user.name, 'competition_id':user.competition_id.pk, 'team_name': team.team_name}})
         else:
             return standard_response(status_code["not_login"], "尚未登录") 
     elif request.method == "POST":
@@ -353,10 +350,10 @@ def users(request):
                     #update success need to update session too
                     serializer = UserSerializer(user_model)
                     request.session["user"] = serializer.data
-                    return standard_response(status_code["ok"], "", {"user_info": serializer.data})
+                    return standard_response(status_code["ok"], "")
                 except Exception as e:
                     print(e)
-                    return standard_response(status_code["error"], "%s"%traceback.format_exc())
+                    return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
                 
             else:
                 return standard_response(status_code["error"], "传递参数错误")
@@ -397,7 +394,7 @@ def register(request):
                         try:
                             team.save()
                         except Exception as e:
-                            return standard_response(status_code["error"], "%s"%traceback.format_exc())
+                            return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
                         finally:
                             break
                 
@@ -485,17 +482,40 @@ def register(request):
 #传入竟赛id，返回指定竟赛的统计信息
 @api_view(["GET"])
 def count(request):
-    count_array = []
-    competitions = Competition.objects.all()
-    for competition in competitions:
-        teams = competition.team_set.all()
-        teams_number = len(teams)
-        users = competition.user_set.all()
-        users_number = len(users)
-        count_array.append({competition.pk:{"teams_number":str(teams_number), "users_number":str(users_number), "current_stage": current_stage}})
-        #TODO: 是否增加已经提交的结果数量
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    print(json_dic)
+    if 'competition_id' in json_dic:
+        try:
+            competition = Competition.objects.get(pk=json_dic["competition_id"])
+        except Competiton.DoesNotExist:
+            return standard_response(status_code["not_exist"], "指定的竞赛不存在")
+        else:
+            teams = competition.team_set.all()
+            teams_number = len(teams)
+            users = competition.user_set.all()
+            users_number = len(users) 
+            return standard_response(status_code["ok"],"", {"team_number": str(teams_number), "user_number": str(users_number), "current_stage": current_stage, "deadline": deadline})
+    else:
+        if "user" in request.session:
+            user = request.session["user"]
+            try:
+                user = User.objects.get(phone_number=user['phone_number'])
+            except User.DoesNotExist:
+                return standard_response(status_code["not_login"], "目前尚未登录")
+            else:   
+                competition = user.competition_id
+                teams = competition.team_set.all()
+                teams_number = len(teams)
+                users = competition.user_set.all()
+                users_number = len(users) 
+                return standard_response(status_code["ok"],"", {"team_number": str(teams_number), "user_number": str(users_number), "current_stage": current_stage, "deadline": deadline})
+        else:
+            return standard_response(status_code["not_login"], "目前尚未登录")   
+            
     
-    return standard_response(status_code["ok"],"",count_array)
+    
 
 @api_view(["POST"])
 def test(request):

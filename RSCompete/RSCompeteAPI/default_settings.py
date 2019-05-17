@@ -7,3 +7,4 @@ class System_Config():
     scene_classification_gt = "/media/xuan/新加卷/code/NSFC接口/NSFC_contest/scene_classification_gt"
     upload_count_perday = 5
     current_stage = "注册中" #目前的状态
+    deadline = "2019/06/30"

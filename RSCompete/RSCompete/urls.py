@@ -20,12 +20,13 @@ from RSCompeteAPI.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('competition', competitionList),
-    path('users/login', login),
-    path("users", users),
-    path("users/register", register),
+    path('user/login', login),
+    path("user/info", users),
+    path("user/register", register),
     path("test", test),
-    path("users/logout", logout),
-    path("count", count),
+    path("user/logout", logout),
+    path("theme/count", count),
     path("results", results),
+    path("results/upload", results_upload),
     path("results/leaderboard", leaderboard),
 ]
