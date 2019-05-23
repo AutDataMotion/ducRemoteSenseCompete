@@ -19,7 +19,7 @@ import traceback
 import json
 from RSCompeteAPI.default_settings import System_Config
 from RSCompeteAPI.tasks import add, mul, wtf, scene_classification
-
+from django.db.models import Avg, Max, Min, Count, Sum
 #3代表有某种属性重复
 status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6,"not_exist":7, "unknown_error":8}
 #加入竞赛id与竞赛项目的区分
@@ -518,9 +518,51 @@ def count(request):
                 return standard_response(status_code["ok"],"", {"team_number": str(teams_number), "user_number": str(users_number), "current_stage": current_stage, "deadline": deadline})
         else:
             return standard_response(status_code["not_login"], "目前尚未登录")   
-            
+@api_view(["GET"])
+def statistics_all(request):
+    country = User.objects.values_list("country").annotate(Count("country"))
+    country_size = len(country)
+    city = User.objects.values_list("city").annotate(Count("city"))
+    city_size = len(city)
+    team = Team.objects.all()
+    team_size = len(team)
+    return standard_response(status_code["ok"],"", {"country": country_size, "city": city_size, "team_number": team_size})
+
+@api_view(["GET"])
+def statistics_country(request):
+    country = User.objects.filter(is_captain=1).values("country").annotate(count=Count("country")).order_by('-count')
+    json_list = [{"rankNum": index + 1, "name":item["country"], "team_number":item["count"]} for index, item in enumerate(country)]
     
+    return standard_response(status_code["ok"],"",{"countries":json_list})
     
+@api_view(["GET"])
+def statistics_city(request):
+    city = User.objects.filter(is_captain=1).values("city").annotate(count=Count("city")).order_by('-count')
+    json_list = [{"rankNum": index + 1, "name":item["city"], "team_number":item["count"]} for index, item in enumerate(city)]
+    
+    return standard_response(status_code["ok"],"",{"cities":json_list})   
+
+@api_view(["GET"])
+def statistics_detail(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    if "city_name" in json_dic:
+        captain = User.objects.filter(is_captain=1).filter(city=json_dic["city_name"])
+        school = captain.filter(work_id=1).values("work_place_top").annotate(count=Count("work_place_top")).order_by("-count")
+        academy = captain.filter(work_id=2).values("work_place_top").annotate(count=Count("work_place_top")).order_by("-count")
+        company = captain.filter(work_id=3).values("work_place_top").annotate(count=Count("work_place_top")).order_by("-count")
+        other = captain.filter(work_id=4).values("work_place_top").annotate(count=Count("work_place_top")).order_by("-count")
+        school_json_list = [{"rankNum": index + 1, "name":item["work_place_top"], "team_number":item["count"]} for index, item in enumerate(school)]
+        academy_json_list = [{"rankNum": index + 1, "name":item["work_place_top"], "team_number":item["count"]} for index, item in enumerate(academy)]
+        company_json_list = [{"rankNum": index + 1, "name":item["work_place_top"], "team_number":item["count"]} for index, item in enumerate(company)]
+        other_json_list = [{"rankNum": index + 1, "name":item["work_place_top"], "team_number":item["count"]} for index, item in enumerate(other)]
+        return standard_response(status_code["ok"], "", {"school":school_json_list,"academy":academy_json_list,"company":company_json_list,"other":other_json_list})
+
+    else:
+        return standard_response(status_code["error"], "未传入需查询城市")
+
+
 
 @api_view(["POST"])
 def test(request):

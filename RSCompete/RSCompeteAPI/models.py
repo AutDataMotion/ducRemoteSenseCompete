@@ -3,6 +3,7 @@ from django.db import models
 # Create your models here.
 class User(models.Model):
     work_id_choices = ((1, "学生"),(2, "教师"),(3, "工程师"),(4,"科研人员"),(5,"其他"))
+    # 1是高校，2是科研院所，3是公司，4是其他
     #uid = models.IntegerField(primary_key=True)
     #token = models.CharField(unique=True, max_length=128)
     name = models.CharField(max_length=32)

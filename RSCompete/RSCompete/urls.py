@@ -29,4 +29,8 @@ urlpatterns = [
     path("results", results),
     path("results/upload", results_upload),
     path("results/leaderboard", leaderboard),
+    path("statistics/all", statistics_all),
+    path("statistics/country", statistics_country),
+    path("statistics/city", statistics_city),
+    path("statistics/city/detail", statistics_detail),
 ]
