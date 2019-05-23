@@ -1,0 +1,67 @@
+ userTypeId:0,  // 用户类别
+        realName: '', // 姓名
+        idNum: '', // 身份证
+        userName: '', // 昵称
+        passwd: '', // 密码
+        rePasswd: '', // 确认密码
+        phone: '', // 手机号
+
+        inviteCode: '', // 邀请码
+        theme: '', // 赛题
+        teamName: '', // 队伍名称
+
+        identity: '', // 身份
+        organ1: '', // 单位1
+        organ2: '', // 单位2
+        organ3: '', // 单位3
+        
+        address1: '', // 国家
+        address2: '', // 省
+        address3: '', // 市
+		
+
+	1 首页
+	
+	主办单位 放大
+	
+	competeId 为空 所有的
+	teamName 为空 所有的
+	
+	page -> pageId:1,
+    number -> pageSize:30,
+
+	输入：
+	leaderboard:{
+		pageId:1, 	  // 非空
+		pageSize:30,  // 非空
+		competeId: 2, // 非空 
+		teamName:'',  // 为空 所有的
+	}
+
+	返回的数据格式：
+	
+	{
+		"status": 1,  
+		"data": {   // 表格数据格式
+			total:0, // 总行数
+			list:[{rankObj},{}],
+			pageId:1,  // 
+			pageSize:30, // 
+		},
+		"message": ""
+	}
+	
+	排名返回的数据对象需要 
+	rankObj: {
+		rankNum:12,
+		teamName:'',
+		score: 22.2
+	}
+	
+	队长注册成功后，得到邀请码
+	队员注册需要填写 邀请码
+	
+	
+		
+		
+		

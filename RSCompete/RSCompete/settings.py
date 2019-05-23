@@ -25,7 +25,7 @@ SECRET_KEY = '*khpkn_ti(kmcm_=ujkrzh$qqjxau14k64hvp@v@4f5qwa8)bx'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 #add the support of send email
 
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'RSCompeteAPI',
     'django_celery_results',
@@ -55,14 +56,22 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.csrf.CsrfViewMiddleware',
+    
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'RSCompete.urls'
+CORS_ALLOW_CREDENTIALS=True
+CORS_ORIGIN_ALLOW_ALL = True
+#CORS_ORIGIN_WHITELIST = ["http://localhost:4444"]
+CORS_ALLOW_METHODS = ('POST', 'GET', 'DELETE','OPTIONS','PATCH','PUT','VIEW')
+CORS_ALLOW_HEADERS = ('XMLHttpRequest','X_FILENAME','accept-encoding','authorization','content-type','dnt','origin','user-agent','x-csrftoken','x-requested-with')
+
 
 TEMPLATES = [
     {
@@ -81,7 +90,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'RSCompete.wsgi.application'
-
+SESSION_COOKIE_SAMESITE=None
 
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
@@ -139,7 +148,7 @@ APPEND_SLASH=False
 
 STATIC_URL = '/static/'
 
-CRONJOBS = [('0 1 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> ./test.log"),]
+CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> ./test.log"),]
 
 CELERY_RESULT_BACKEND = 'django-db'
 

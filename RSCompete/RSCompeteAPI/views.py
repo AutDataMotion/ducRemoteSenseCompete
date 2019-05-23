@@ -99,6 +99,7 @@ def leaderboard(request):
             return standard_response(status_code["error"],"未找到指定竞赛")
         cid = competition.pk
         file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", time.localtime()), str(cid), "leaderboard.json")
+        print(file_path)
         try:
             with open(file_path,"r") as f:
                 file_jsondic = json.load(f)
@@ -144,7 +145,7 @@ def leaderboard(request):
             #print(page_results.object_list)
             # serializer = ResultSerializer(data=page_results, many=True)
             # teams_serializer = TeamSerializer(data=page_teams, many=True)
-            return standard_response(status_code["ok"],"",{"list":page_results.object_list, "pageId":page, "pageSize":number, "total":len(results)})
+            return standard_response(status_code["ok"],"",{"results":page_results.object_list, "pageId":page, "pageSize":number, "total":len(results)})
         else:
             return standard_response(status_code["ok"], "", {"list":results, "total": len(results)})
 
@@ -190,7 +191,7 @@ def leaderboard(request):
     #     serializer = ResultSerializer(results, many=True)
     #     teams_serializer = TeamSerializer(results_teams, many=True)
     #     return standard_response(status_code["ok"], "", {"results":serializer.data, 'teams': teams_serializer.data})
-@api_view(["POST"])
+@api_view(["POST","OPTIONS"])
 def results_upload(request):
     if "user" in request.session:
         user = request.session["user"]
@@ -205,6 +206,7 @@ def results_upload(request):
         remain = upload_perday - today_results_count
         if remain == 0:
             return standard_response(status_code["error"], "今日上传次数已满")
+        print(request.FILES)
         file_obj = request.FILES.get("file")
         if file_obj is None:
             return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
@@ -239,7 +241,7 @@ def results_upload(request):
             #TODO: 上传文件成功需要加入任务调度功能
             #TODO: 上传文件应该是一个压缩包，需要解压缩操作
             #FIXME: 加入场景分类作为测试
-            scene_classification.delay(file_path, scene_classification_gt, result.pk)
+            #scene_classification.delay(file_path, scene_classification_gt, result.pk)
         
             return standard_response(status_code["ok"],"")
               
@@ -293,12 +295,14 @@ def results(request):
     else:
         return standard_response(status_code["not_login"], "尚未登录")
 #TODO: 登录成功返回队伍信息，队伍名等
-@api_view(["POST"])
+@api_view(["POST","OPTIONS"])
 def login(request):
     if request.method == "POST":
-        content = JSONRenderer().render(request.POST)
+        content = JSONRenderer().render(request.data)
         stream = BytesIO(content)
         json_dic = JSONParser().parse(stream)
+        #json_dic = json.loads(request.body)
+        print(json_dic)
         if 'phone_number' in json_dic and 'password' in json_dic:
             phone_number = json_dic['phone_number']
             password = json_dic['password']
@@ -309,6 +313,7 @@ def login(request):
                     #success login
                     serializer = UserSerializer(user)
                     request.session["user"] = serializer.data
+                    print(request.session["user"])
                     return standard_response(status_code["ok"], "", {"user_info": serializer.data})
                 else:
                     #password error
@@ -317,7 +322,7 @@ def login(request):
                 return standard_response(status_code["error"], "没有该用户")
         else: 
             return standard_response(status_code["error"], "缺少必要参数") 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST","OPTIONS"])
 def users(request):
     if request.method == "GET":
         if "user" in request.session:
@@ -338,7 +343,7 @@ def users(request):
         if "user" in request.session:
             user = request.session["user"]
             #serializer = UserSerializer(data=user)
-            content = JSONRenderer().render(request.POST)
+            content = JSONRenderer().render(request.data)
             stream = BytesIO(content)
             json_dic = JSONParser().parse(stream)
             if "password" in json_dic:
@@ -360,9 +365,9 @@ def users(request):
         else:
             return standard_response(status_code["not_login"], "尚未登录")
             
-@api_view(["POST"])
+@api_view(["POST","OPTIONS"])
 def register(request):
-    content = JSONRenderer().render(request.POST)
+    content = JSONRenderer().render(request.data)
     stream = BytesIO(content)
     json_dic = JSONParser().parse(stream)
     if not "is_captain" in json_dic:
@@ -526,8 +531,10 @@ def test(request):
     #team.delete()
     return standard_response("ok","")
 
-@api_view(["POST"])
+@api_view(["POST","OPTIONS"])
 def logout(request):
+    if not 'user' in request.session:
+        return standard_response(status_code['ok'], "")
     try:
         del request.session["user"]
     except:
