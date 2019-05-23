@@ -572,7 +572,7 @@ def invite_code(request):
         except Team.DoesNotExist:
             return standard_response(status_code["ok"], "", {"result":"false"})
         else:
-            return standard_response(status_code["ok"], "", {'result':"true", 'team_id':team.pk, "team_name":team.team_name, "competition_id": team.competition_id})
+            return standard_response(status_code["ok"], "", {'result':"true", 'team_id':team.pk, "team_name":team.team_name, "competition_id": team.competition_id.pk})
     else:
         return standard_response(status_code["error"], "未正确传入参数")
 
