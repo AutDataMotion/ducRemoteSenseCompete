@@ -5,6 +5,6 @@ class System_Config():
     team_member_number = 5
     leader_board_root_dir = "/home/xuan/ducRemoteSenseCompete/leadboard"
     scene_classification_gt = "/home/xuan/ducRemoteSenseCompete/NSFC_contest/scene_classification_gt"
-    upload_count_perday = 5
+    upload_count_perday = 1
     current_stage = "注册中" #目前的状态
     deadline = "2019/06/30"

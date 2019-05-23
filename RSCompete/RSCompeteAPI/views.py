@@ -561,7 +561,20 @@ def statistics_detail(request):
 
     else:
         return standard_response(status_code["error"], "未传入需查询城市")
-
+@api_view(["GET"])
+def invite_code(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    if "invite_code" in json_dic:
+        try:
+            team = Team.objects.get(invite_code=json_dic["invite_code"])
+        except Team.DoesNotExist:
+            return standard_response(status_code["ok"], "", {"result":"false"})
+        else:
+            return standard_response(status_code["ok"], "", {'result':"true", 'team_id':team.pk, "team_name":team.team_name, "competition_id": team.competition_id})
+    else:
+        return standard_response(status_code["error"], "未正确传入参数")
 
 
 @api_view(["POST"])
