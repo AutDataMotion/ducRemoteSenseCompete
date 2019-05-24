@@ -18,7 +18,7 @@ import time
 import traceback
 import json
 from RSCompeteAPI.default_settings import System_Config
-from RSCompeteAPI.tasks import add, mul, wtf, scene_classification, change_detection, semantic_segmentation
+from RSCompeteAPI.tasks import add, mul, wtf, scene_classification, change_detection, semantic_segmentation, object_detection
 from django.db.models import Avg, Max, Min, Count, Sum
 #3代表有某种属性重复
 status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6,"not_exist":7, "unknown_error":8}
@@ -36,7 +36,7 @@ semantic_segmentation_gt = System_Config.semantic_segmentation_gt
 scene_classification_test_image_path = System_Config.scene_classification_test_image_path
 change_detection_test_image_path = System_Config.change_detection_test_image_path
 semantic_segmentation_test_image_path = System_Config.semantic_segmentation_test_image_path
-
+detection_gt = System_Config.detection_gt
 upload_perday = System_Config.upload_count_perday
 current_stage = System_Config.current_stage
 deadline = System_Config.deadline
@@ -210,6 +210,7 @@ def results_upload(request):
         team = user.team_id
         begin_time_stamp, end_time_stamp = get_time_range()
         today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+        print(today_results_count)
         remain = upload_perday - today_results_count
         if remain == 0:
             return standard_response(status_code["error"], "今日上传次数已满")
@@ -251,7 +252,7 @@ def results_upload(request):
             #
             print(competition.pk)
             if competition.pk == 1:
-                scene_classification.delay(file_path, change_detection_gt, change_detection_test_image_path, result.pk)
+                object_detection.delay(file_path, detection_gt, "", result.pk)
             elif competition.pk == 2:
                 scene_classification.delay(file_path, scene_classification_gt, scene_classification_test_image_path, result.pk)
             elif competition.pk == 3:

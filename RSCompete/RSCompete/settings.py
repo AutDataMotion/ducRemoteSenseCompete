@@ -152,4 +152,4 @@ CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> ./test.lo
 
 CELERY_RESULT_BACKEND = 'django-db'
 
-CELERY_BROKER_URL = 'amqp://xuan:147258123@10.2.29.233:5672/host_xuan'
+CELERY_BROKER_URL = 'amqp://RS:147258123@192.168.1.189:5672/RS_host'

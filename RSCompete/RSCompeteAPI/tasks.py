@@ -20,7 +20,9 @@ def xsum(numbers):
 @shared_task
 def wtf(s):
     return s
-
+@shared_task
+def object_detection(root_path, annopath, path_test_image, result_id):
+    return 0
 
 @shared_task
 def semantic_segmentation(root_path, annopath, path_test_image, result_id):
