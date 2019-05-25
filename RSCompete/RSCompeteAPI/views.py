@@ -453,7 +453,7 @@ def register(request):
                 else:
                     #TODO: 注册成功向注册邮箱发送邮件
                     try:
-                        send_mail("恭喜你成功报名参加本届比赛", "队伍邀请码为{}".format(team.invite_code), "a464430440@163.com", [serializer.data["email"]], fail_silently=False)
+                        send_mail("恭喜你成功报名参加本届比赛", "队伍邀请码为{}".format(team.invite_code), "rssrai@163.com", [serializer.data["email"]], fail_silently=False)
                     except Exception as e:
                         #发送邮件失败注册信息全部删除
                         #只需要删除队伍信息即可，用户与队伍通过外键关联，删除队伍将删除对应的队员
