@@ -461,7 +461,7 @@ def register(request):
                         user.delete()
 
                         return standard_response(status_code["error"], "发送邮件失败")
-                    else：
+                    else:
                         request.session["user"] = serializer.data
                         return standard_response(status_code["ok"],"", {"user_info":serializer.data, "team_name": team.team_name})
         else:
