@@ -37,6 +37,7 @@ scene_classification_test_image_path = System_Config.scene_classification_test_i
 change_detection_test_image_path = System_Config.change_detection_test_image_path
 semantic_segmentation_test_image_path = System_Config.semantic_segmentation_test_image_path
 detection_gt = System_Config.detection_gt
+detection_test_image_path = System_Config.detection_test_image_path
 upload_perday = System_Config.upload_count_perday
 current_stage = System_Config.current_stage
 deadline = System_Config.deadline
@@ -252,7 +253,7 @@ def results_upload(request):
             #
             print(competition.pk)
             if competition.pk == 1:
-                object_detection.delay(file_path, detection_gt, "", result.pk)
+                object_detection.delay(file_path, detection_gt, detection_test_image_path, result.pk)
             elif competition.pk == 2:
                 scene_classification.delay(file_path, scene_classification_gt, scene_classification_test_image_path, result.pk)
             elif competition.pk == 3:
