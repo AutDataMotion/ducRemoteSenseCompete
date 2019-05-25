@@ -451,11 +451,19 @@ def register(request):
                     return standard_response(status_code["user_repeat"], "%s"%traceback.format_exc())
                     #创建失败队伍也不应该被创建
                 else:
-                    request.session["user"] = serializer.data
                     #TODO: 注册成功向注册邮箱发送邮件
-                    
-                    send_mail("恭喜你成功报名参加本届比赛", "队伍邀请码为{}".format(team.invite_code), "a464430440@163.com", [serializer.data["email"]], fail_silently=False)
-                    return standard_response(status_code["ok"],"", {"user_info":serializer.data})
+                    try:
+                        send_mail("恭喜你成功报名参加本届比赛", "队伍邀请码为{}".format(team.invite_code), "a464430440@163.com", [serializer.data["email"]], fail_silently=False)
+                    except Exception as e:
+                        #发送邮件失败注册信息全部删除
+                        team.delete()
+                        user = User.objects.get(phone_number=serializer.data["phone_number"])
+                        user.delete()
+
+                        return standard_response(status_code["error"], "发送邮件失败")
+                    else：
+                        request.session["user"] = serializer.data
+                        return standard_response(status_code["ok"],"", {"user_info":serializer.data, "team_name": team.team_name})
         else:
             return standard_response(status_code["error"], "未选择正确的工作身份")
     else:
