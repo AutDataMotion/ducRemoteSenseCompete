@@ -354,7 +354,7 @@ def users(request):
             #team_members = team.user_set.all()
             #team_members_serializer = UserSerializer(team_members, many=True)
             #serializer = UserSerializer(user, many=False)
-            return standard_response(status_code["ok"], "", data={"user_info": {'name':user.name, 'competition_id':user.competition_id.pk, 'team_name': team.team_name}})
+            return standard_response(status_code["ok"], "", data={"user_info": {'name':user.name, 'is_captain': user.is_captain, 'invite_code':team.invite_code, 'competition_id':user.competition_id.pk, 'team_name': team.team_name}})
         else:
             return standard_response(status_code["not_login"], "尚未登录") 
     elif request.method == "POST":
@@ -458,18 +458,18 @@ def register(request):
                 else:
                     #TODO: 注册成功向注册邮箱发送邮件
                     try:
-                    #    pass
+                       
                        #TODO: 目前无法发送，稍后再试
                        send_mail("恭喜你成功报名参加本届比赛", "请积极准备比赛，并邀请你的队伍成员加入，你的队伍邀请码为{}".format(team.invite_code), "rssrai2019@163.com", [serializer.data["email"]], fail_silently=False)
                     except Exception as e:
                         #发送邮件失败注册信息全部删除
                         #只需要删除队伍信息即可，用户与队伍通过外键关联，删除队伍将删除对应的队员
                         print(e)
-                        team.delete()
+                        request.session['user'] = serializer.data
                         # user = User.objects.get(phone_number=serializer.data["phone_number"])
                         # user.delete()
 
-                        return standard_response(status_code["error"], "发送邮件失败")
+                        return standard_response(status_code["ok"], "", {'user_info':serializer.data, "team_name": team.team_name})
                     else:
                         request.session["user"] = serializer.data
                         return standard_response(status_code["ok"],"", {"user_info":serializer.data, "team_name": team.team_name})
