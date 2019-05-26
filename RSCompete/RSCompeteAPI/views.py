@@ -427,6 +427,11 @@ def register(request):
             
             team = Team.objects.get(team_name=json_dic['team_name'])
             json_dic["team_id"] = team.pk
+            #TODO: 处理选择控件的问题,若为中国则provinceCity是一个数组，若不是中国则是字符串
+            if json_dic['country'] != "中国":
+                json_dic["country"] = json_dic["provinceCity"]
+            json_dic["province"] = json_dic["provinceCity"][0]
+            json_dic["city"] = json_dic["provinceCity"][1]
             try:
                 serializer = UserSerializer(data=json_dic)
             except:
@@ -488,6 +493,13 @@ def register(request):
             json_dic["team_name"] = team.team_name
             json_dic["competition_id"] = team.competition_id.pk
             json_dic['team_id'] = team.pk
+            #TODO: 处理选择控件的问题
+            if json_dic['country'] != "中国":
+                json_dic["country"] = json_dic["provinceCity"]
+            json_dic["province"] = json_dic["provinceCity"][0]
+            json_dic["city"] = json_dic["provinceCity"][1]
+
+
             try:
                 serializer = UserSerializer(data=json_dic)
             except:
