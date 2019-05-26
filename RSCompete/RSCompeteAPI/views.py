@@ -398,7 +398,7 @@ def register(request):
             return standard_response(status_code["error"], "必须制定竞赛项目")
         if not "team_name" in json_dic:
             return standard_response(status_code["error"], "必须指定队伍名称")
-        if json_dic['work_id'] in ['1','2','3','4','5']:
+        if json_dic['work_id'] in [1,2,3,4]:
             try:
                 competition = Competition.objects.get(pk=json_dic["competition_id"])
             except:

@@ -32,12 +32,13 @@ def generate_leaderboard():
             #需要处理并列的情况
             team_results = team.result_set.all().order_by("-score")
             if len(team_results) > 0:
-                results.append({"team_name": team.team_name, "score": team_results[0].score, "rankNum": rank})
+                
                 if order == 1:
                     previous_score = team_results[0].score
                 if previous_score != team_results[0].score:
                     previous_score = team_results[0].score
-                    rank = orders
+                    rank = order
+                results.append({"team_name": team.team_name, "score": team_results[0].score, "rankNum": rank})
                 order += 1
                 
                 
