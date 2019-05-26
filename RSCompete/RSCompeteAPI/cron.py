@@ -27,16 +27,19 @@ def generate_leaderboard():
         results = []
         order = 1
         rank = 1
-        previous_score = -10000000.
+        
         for team in teams:
             #需要处理并列的情况
             team_results = team.result_set.all().order_by("-score")
             if len(team_results) > 0:
                 results.append({"team_name": team.team_name, "score": team_results[0].score, "rankNum": rank})
-                order += 1
+                if order == 1:
+                    previous_score = team_results[0].score
                 if previous_score != team_results[0].score:
                     previous_score = team_results[0].score
-                    rank = order
+                    rank = orders
+                order += 1
+                
                 
                 
         # serializer = ResultSerializer(results, many=True)
