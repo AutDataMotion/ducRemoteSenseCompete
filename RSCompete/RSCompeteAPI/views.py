@@ -391,7 +391,7 @@ def register(request):
     if not "is_captain" in json_dic:
         return standard_response(status_code["error"], "必须选择是否为队长")
     
-    if json_dic["is_captain"] == "1":
+    if json_dic["is_captain"] == 1:
         #队长注册
         #print(json_dic["work_id"])
         if not "competition_id" in json_dic:
@@ -470,7 +470,7 @@ def register(request):
                         return standard_response(status_code["ok"],"", {"user_info":serializer.data, "team_name": team.team_name})
         else:
             return standard_response(status_code["error"], "未选择正确的工作身份")
-    else:
+    elif json_dic["is_captain"] == 0:
         #TODO: 队员注册, 传入的属性为邀请码(team_id->invite_code)
         if "invite_code" in json_dic:
             try:
@@ -514,6 +514,8 @@ def register(request):
                 return standard_response(status_code["ok"],"", {"user_info":serializer.data}) 
         else:
             return standard_response(status_code["error"], "未提供邀请码(invite_code)")
+    else:
+        return standard_response(status_code["error"], "传入的is_captain不正确")
 #传入竟赛id，返回指定竟赛的统计信息
 @api_view(["GET"])
 def count(request):

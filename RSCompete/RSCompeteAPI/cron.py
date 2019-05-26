@@ -26,11 +26,19 @@ def generate_leaderboard():
         teams = competition.team_set.all()
         results = []
         order = 1
+        rank = 1
+        previous_score = -10000000.
         for team in teams:
+            #需要处理并列的情况
             team_results = team.result_set.all().order_by("-score")
             if len(team_results) > 0:
-                results.append({"team_name": team.team_name, "score": team_results[0].score, "rankNum": order})
+                results.append({"team_name": team.team_name, "score": team_results[0].score, "rankNum": rank})
                 order += 1
+                if previous_score != team_results[0].score:
+                    previous_score = team_results[0].score
+                    rank = order
+                
+                
         # serializer = ResultSerializer(results, many=True)
         # teams_serializer = TeamSerializer(results_teams, many=True)
         with open(os.path.join(competition_file_path, "leaderboard.json"), "w") as f:
