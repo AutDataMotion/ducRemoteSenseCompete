@@ -253,9 +253,10 @@ def results_upload(request):
             #
             print(competition.pk)
             if competition.pk == 1:
-                object_detection.delay(file_path, detection_gt, detection_test_image_path, result.pk)
-            elif competition.pk == 2:
                 scene_classification.delay(file_path, scene_classification_gt, scene_classification_test_image_path, result.pk)
+            elif competition.pk == 2:
+                object_detection.delay(file_path, detection_gt, detection_test_image_path, result.pk)
+
             elif competition.pk == 3:
                 semantic_segmentation.delay(file_path, semantic_segmentation_gt, semantic_segmentation_test_image_path, result.pk)
             elif competition.pk == 4:
