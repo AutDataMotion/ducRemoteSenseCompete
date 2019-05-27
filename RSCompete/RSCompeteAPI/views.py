@@ -431,8 +431,11 @@ def register(request):
             #TODO: 处理选择控件的问题,若为中国则provinceCity是一个数组，若不是中国则是字符串
             if json_dic['country'] != "中国":
                 json_dic["country"] = json_dic["provinceCity"]
-            json_dic["province"] = json_dic["provinceCity"][0]
-            json_dic["city"] = json_dic["provinceCity"][1]
+                json_dic["province"] = " "
+                json_dic["city"] = " "
+            else:
+                json_dic["province"] = json_dic["provinceCity"][0]
+                json_dic["city"] = json_dic["provinceCity"][1]
             try:
                 serializer = UserSerializer(data=json_dic)
             except:
@@ -461,7 +464,7 @@ def register(request):
                     try:
                        
                        #TODO: 目前无法发送，稍后再试
-                       send_mail("恭喜你成功报名参加本届比赛", "恭喜您成功报名参加本次大赛，作为队长，您最多可邀请4名队员组队参加，队伍邀请码为{}，请积极准备比赛，预祝取得好成绩".format(team.invite_code), "rssrai2019@163.com", [serializer.data["email"]], fail_silently=False)
+                       send_mail("恭喜你成功报名参加本届比赛", "{}, 恭喜您成功报名参加本次大赛，您注册的手机号码为{}, 作为队长，您最多可邀请4名队员组队参加，队伍邀请码为{}，请积极准备比赛，预祝取得好成绩".format(serializer.data['name'], serializer.data['phone_number'], team.invite_code), "rssrai2019@163.com", [serializer.data["email"]], fail_silently=False)
                     except Exception as e:
                         #发送邮件失败注册信息全部删除
                         #只需要删除队伍信息即可，用户与队伍通过外键关联，删除队伍将删除对应的队员
@@ -497,8 +500,11 @@ def register(request):
             #TODO: 处理选择控件的问题
             if json_dic['country'] != "中国":
                 json_dic["country"] = json_dic["provinceCity"]
-            json_dic["province"] = json_dic["provinceCity"][0]
-            json_dic["city"] = json_dic["provinceCity"][1]
+                json_dic["city"] = " "
+                json_dic["province"] = " "
+            else:
+                json_dic["province"] = json_dic["provinceCity"][0]
+                json_dic["city"] = json_dic["provinceCity"][1]
 
 
             try:
