@@ -4,7 +4,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils.six import BytesIO
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.mail import send_mail, send_mass_mail
-
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 from rest_framework.decorators import api_view
@@ -314,6 +314,7 @@ def results(request):
     else:
         return standard_response(status_code["not_login"], "尚未登录")
 #TODO: 登录成功返回队伍信息，队伍名等
+@csrf_exempt
 @api_view(["POST","OPTIONS"])
 def login(request):
     if request.method == "POST":
