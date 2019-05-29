@@ -30,13 +30,18 @@ ALLOWED_HOSTS = ['*']
 #add the support of send email
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_USE_TLS = False   #是否使用TLS安全传输协议(用于在两个通信应用程序之间提供保密性和数据完整性。)
-EMAIL_USE_SSL = True    #是否使用SSL加密，qq企业邮箱要求使用
-EMAIL_HOST = 'smtp.163.com'   #发送邮件的邮箱 的 SMTP服务器，这里用了163邮箱
-EMAIL_PORT = 465     #发件箱的SMTP服务器端口
-EMAIL_HOST_USER = 'rssrai2019@163.com'    #发送邮件的邮箱地址
-EMAIL_HOST_PASSWORD = 'Duccsu123'         #发送邮件的邮箱密码(这里使用的是授权码
-
+#EMAIL_USE_TLS = False   #是否使用TLS安全传输协议(用于在两个通信应用程序之间提供保密性和数据完整性。)
+#EMAIL_USE_SSL = True    #是否使用SSL加密，qq企业邮箱要求使用
+#EMAIL_HOST = 'smtp.163.com'   #发送邮件的邮箱 的 SMTP服务器，这里用了163邮箱
+#EMAIL_PORT = 465     #发件箱的SMTP服务器端口
+#EMAIL_HOST_USER = 'rssrai2019@163.com'    #发送邮件的邮箱地址
+#EMAIL_HOST_PASSWORD = 'Duccsu123'         #发送邮件的邮箱密码(这里使用的是授权码
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST = 'smtp.office365.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'rssrai2019@hotmail.com'
+EMAIL_HOST_PASSWORD = 'whu2019csu'
 # Application definition
 
 INSTALLED_APPS = [
