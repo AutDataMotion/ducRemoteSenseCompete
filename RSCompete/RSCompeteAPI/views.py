@@ -18,13 +18,13 @@ import time
 import traceback
 import json
 from RSCompeteAPI.default_settings import System_Config
-from RSCompeteAPI.tasks import add, mul, wtf, scene_classification, change_detection, semantic_segmentation, object_detection
+from RSCompeteAPI.tasks import add, mul, wtf, scene_classification, change_detection, semantic_segmentation, object_detection, tracking
 from django.db.models import Avg, Max, Min, Count, Sum
 #3代表有某种属性重复
 status_code = {"ok":1,"error":2,"team_repeat":3,"user_repeat":4, "full_member":5, "not_login":6,"not_exist":7, "unknown_error":8}
 #加入竞赛id与竞赛项目的区分
 #竞赛类型 1-目标检测 2-场景分类 3-语义分割 4-变化检测 5-目标追踪
-competition_dict = {1:"object_detection", 2:"scene_classification", 3:"semantic_segmentation", 4:"change_detection", 5:"object_tracking"}
+competition_dict = {2:"object_detection", 1:"scene_classification", 3:"semantic_segmentation", 4:"change_detection", 5:"object_tracking"}
 
 #TODO: 从系统设置中读入设置
 root_dir = System_Config.result_root_dir
@@ -38,6 +38,7 @@ change_detection_test_image_path = System_Config.change_detection_test_image_pat
 semantic_segmentation_test_image_path = System_Config.semantic_segmentation_test_image_path
 detection_gt = System_Config.detection_gt
 detection_test_image_path = System_Config.detection_test_image_path
+tracking_gt = System_Config.tracking_gt
 upload_perday = System_Config.upload_count_perday
 current_stage = System_Config.current_stage
 deadline = System_Config.deadline
@@ -261,6 +262,8 @@ def results_upload(request):
                 semantic_segmentation.delay(file_path, semantic_segmentation_gt, semantic_segmentation_test_image_path, result.pk)
             elif competition.pk == 4:
                 change_detection.delay(file_path, change_detection_gt, change_detection_test_image_path, result.pk)
+            elif competition.pk == 5:
+                tracking.delay(file_path, tracking_gt, result.pk)
             #mysql_test.delay(file_path, scene_classification_gt, result.pk)
             return standard_response(status_code["ok"],"")
               

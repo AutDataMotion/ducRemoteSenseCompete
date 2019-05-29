@@ -23,7 +23,9 @@ def wtf(s):
 @shared_task
 def object_detection(root_path, annopath, path_test_image, result_id):
     return 0
-
+@shared_task
+def tracking(root_path, annopath, result_id):
+    pass
 @shared_task
 def semantic_segmentation(root_path, annopath, path_test_image, result_id):
     try:

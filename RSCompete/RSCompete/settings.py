@@ -152,6 +152,8 @@ APPEND_SLASH=False
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = '/home.xuan/ducRemoteSenseCompete/static'
+STATICFILES_DIRS = (os.path.join(BASE_DIR, "static")) 
 
 CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> ./test.log"),]
 

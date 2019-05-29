@@ -13,7 +13,7 @@ class System_Config():
     semantic_segmentation_test_image_path = "/data/semantic_segmentation/test_pics"
     detection_gt = "/data/detection/test_challenge_c1_gt"
     detection_test_image_path = "/data/detection/visualize_images"
-    
+    tracking_gt = "/data/tracking/gt/RS_gt"    
     upload_count_perday = 50
     current_stage = "注册中" #目前的状态
     deadline = "2019/06/30"
