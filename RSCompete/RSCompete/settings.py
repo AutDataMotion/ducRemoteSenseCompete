@@ -152,10 +152,10 @@ APPEND_SLASH=False
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/home.xuan/ducRemoteSenseCompete/static'
-STATICFILES_DIRS = (os.path.join(BASE_DIR, "static")) 
+STATIC_ROOT = '/home/xuan/ducRemoteSenseCompete/static'
+#STATICFILES_DIRS = ("/home/xuan/ducRemoteSenseCompete/static") 
 
-CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> ./test.log"),]
+CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> /home/xuan/crontab.log"),]
 
 CELERY_RESULT_BACKEND = 'django-db'
 

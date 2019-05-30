@@ -27,21 +27,29 @@ def generate_leaderboard():
         results = []
         order = 1
         rank = 1
-        
+        team_dic = []        
         for team in teams:
             #需要处理并列的情况
             team_results = team.result_set.all().order_by("-score")
             if len(team_results) > 0:
+                team_dic.append((team.team_name, team_results[0].score))
+                #if order == 1:
+                #    previous_score = team_results[0].score
+                #if previous_score != team_results[0].score:
+                #    previous_score = team_results[0].score
+                #    rank = order
+                #results.append({"team_name": team.team_name, "score": team_results[0].score, "rankNum": rank})
+                #order += 1
                 
-                if order == 1:
-                    previous_score = team_results[0].score
-                if previous_score != team_results[0].score:
-                    previous_score = team_results[0].score
-                    rank = order
-                results.append({"team_name": team.team_name, "score": team_results[0].score, "rankNum": rank})
-                order += 1
-                
-                
+        team_dic.sort(key=lambda a: a[1], reverse=True)
+        for element in team_dic:
+            if order == 1:
+                previous_score = element[1]
+            if previous_score != element[1]:
+                previous_score = element[1]
+                rank = order
+            results.append({"team_name": element[0], "score": element[1], "rankNum": rank})
+            order += 1
                 
         # serializer = ResultSerializer(results, many=True)
         # teams_serializer = TeamSerializer(results_teams, many=True)
