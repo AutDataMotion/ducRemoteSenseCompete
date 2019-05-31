@@ -34,4 +34,5 @@ urlpatterns = [
     path("statistics/city", statistics_city),
     path("statistics/city/detail", statistics_detail),
     path("invitecode", invite_code),
+    path("notify", notify),
 ]

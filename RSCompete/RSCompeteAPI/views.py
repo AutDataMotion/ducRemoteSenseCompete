@@ -71,6 +71,13 @@ def standard_response(status, message, data=None):
     else:
         return JsonResponse({"status":status, "message":message, "data": data}, safe=False, json_dumps_params={"ensure_ascii":False})
 # Create your views here.
+@api_view(["GET"])
+def notify(request):
+    competition = Competition.objects.get(pk=1)
+    return standard_response(status_code["ok"],"",data={"context":[competition.rule]})
+
+
+
 @api_view(["GET", "POST"])
 def competitionList(request):
     if request.method == "GET":
@@ -359,7 +366,7 @@ def users(request):
             #team_members = team.user_set.all()
             #team_members_serializer = UserSerializer(team_members, many=True)
             #serializer = UserSerializer(user, many=False)
-            return standard_response(status_code["ok"], "", data={"user_info": {'name':user.name, 'is_captain': user.is_captain, 'invite_code':team.invite_code, 'competition_id':user.competition_id.pk, 'team_name': team.team_name}})
+            return standard_response(status_code["ok"], "", data={"user_info": {'name':user.name, 'is_captain': user.is_captain, 'invite_code':team.invite_code, 'competition_id':user.competition_id.pk, 'team_name': team.team_name, "country":user.country, "work_id":user.work_id, "work_place_top":user.work_place_top, "work_place_second":user.work_place_second, "work_place_third":user.work_place_third, "phone_number":user.phone_number, "ID_card":user.ID_card, "email":user.email, }})
         else:
             return standard_response(status_code["not_login"], "尚未登录") 
     elif request.method == "POST":
