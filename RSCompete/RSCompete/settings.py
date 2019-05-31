@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '*khpkn_ti(kmcm_=ujkrzh$qqjxau14k64hvp@v@4f5qwa8)bx'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -40,7 +40,7 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_HOST = 'smtp.office365.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'rssrai2019@hotmail.com'
+EMAIL_HOST_USER = 'rscup2019@hotmail.com'
 EMAIL_HOST_PASSWORD = 'whu2019csu'
 # Application definition
 
