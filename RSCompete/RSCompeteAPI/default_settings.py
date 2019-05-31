@@ -16,8 +16,7 @@ class System_Config():
     tracking_gt = "/data/tracking/gt/RS_gt"    
     upload_count_perday = 50
     current_stage = "注册中" #目前的状态
-    deadline = "2019/06/30"
-
+    deadline = "2019/08/10"
 
 
 
