@@ -35,4 +35,5 @@ urlpatterns = [
     path("statistics/city/detail", statistics_detail),
     path("invitecode", invite_code),
     path("notify", notify),
+    path('notify/edit', notify_edit),
 ]

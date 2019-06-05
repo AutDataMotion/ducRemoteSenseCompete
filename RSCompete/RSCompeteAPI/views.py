@@ -42,6 +42,9 @@ tracking_gt = System_Config.tracking_gt
 upload_perday = System_Config.upload_count_perday
 current_stage = System_Config.current_stage
 deadline = System_Config.deadline
+admin_username = System_Config.admin_username
+admin_passwd = System_Config.admin_passwd
+
 
 import random
 import string
@@ -74,9 +77,29 @@ def standard_response(status, message, data=None):
 @api_view(["GET"])
 def notify(request):
     competition = Competition.objects.get(pk=1)
-    return standard_response(status_code["ok"],"",data={"context":[competition.rule]})
+    return standard_response(status_code["ok"],"",data={"context":competition.rule})
 
-
+@api_view(["POST"])
+def notify_edit(request):
+    content = JSONRenderer().render(request.data)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    name = json_dic["name"]
+    passwd = json_dic["cxtpwd"]
+    if name != admin_username or passwd != admin_passwd:
+        return standard_response(status_code["error"], "用户名或者密码错误无修改权限")
+    else:
+        competition = Competition.objects.get(pk=1)
+        if 'content' in json_dic:
+            competition.rule = json_dic['content']
+            try:
+                competition.save()
+            except:
+                return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
+            else:
+                return standard_response(status_code["ok"], "")
+        else:
+            return standard_response(status_code["error"], "传入参数错误")
 
 @api_view(["GET", "POST"])
 def competitionList(request):

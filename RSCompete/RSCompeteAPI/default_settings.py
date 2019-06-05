@@ -18,6 +18,9 @@ class System_Config():
     current_stage = "注册中" #目前的状态
     deadline = "2019/08/10"
 
+    admin_username = "csu"
+    admin_passwd = "csucsucsu"
+
 
 
     #竞赛类型 1-目标检测 2-场景分类 3-语义分割 4-变化检测 5-目标追踪
