@@ -36,4 +36,5 @@ urlpatterns = [
     path("invitecode", invite_code),
     path("notify", notify),
     path('notify/edit', notify_edit),
+    path('dataDownload', get_data_path),
 ]

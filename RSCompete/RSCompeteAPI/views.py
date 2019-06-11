@@ -44,7 +44,7 @@ current_stage = System_Config.current_stage
 deadline = System_Config.deadline
 admin_username = System_Config.admin_username
 admin_passwd = System_Config.admin_passwd
-
+data_path = System_Config.data_path
 
 import random
 import string
@@ -78,7 +78,18 @@ def standard_response(status, message, data=None):
 def notify(request):
     competition = Competition.objects.get(pk=1)
     return standard_response(status_code["ok"],"",data={"context":competition.rule})
-
+@api_view(["GET"])
+def get_data_path(request):
+    if "user" in request.session:
+        user = request.session["user"]
+        try:
+            user = User.objects.get(phone_number=user["phone_number"])
+        except User.DoesNotExist:
+            return standard_response(status_code["not_login"], "尚未登录")
+        else:
+            return standard_response(status_code["ok"],"",{"url":data_path[user.competition_id.pk]["url"], "code":data_path[user.competition_id.pk]["code"]})
+    else:
+        return standard_response(status_code["not_login"], "尚未登录")
 @api_view(["POST"])
 def notify_edit(request):
     content = JSONRenderer().render(request.data)
@@ -90,8 +101,8 @@ def notify_edit(request):
         return standard_response(status_code["error"], "用户名或者密码错误无修改权限")
     else:
         competition = Competition.objects.get(pk=1)
-        if 'content' in json_dic:
-            competition.rule = json_dic['content']
+        if 'context' in json_dic:
+            competition.rule = json_dic['context']
             try:
                 competition.save()
             except:
