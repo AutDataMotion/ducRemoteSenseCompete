@@ -510,7 +510,7 @@ def register(request):
                        
                        #TODO: 目前无法发送，稍后再试
                        competition_d = {1:"遥感图像场景分类", 2:"遥感图像目标检测", 3:"遥感图像语义分割", 4:"遥感图像变化检测", 5:"遥感视频目标跟踪"}
-                       send_mail("RSCUP2019报名通知", "{}, 恭喜您成功报名参加“华为杯”遥感图像稀疏表征与智能分析竞赛，您参加的竞赛主题为{}. 您注册的手机号码为{}, 作为队长，您最多可邀请4名队员组队参加本项竞赛，队伍邀请码为{}. 请积极准备本次竞赛，预祝取得好成绩!".format(serializer.data['name'], competition_d[serializer.data['competition_id']], serializer.data['phone_number'], team.invite_code), "rscup2019@hotmail.com", [serializer.data["email"]], fail_silently=False)
+                       send_mail("RSCUP2019报名通知", "{}, 恭喜您成功报名参加本届遥感图像稀疏表征与智能分析竞赛，您参加的竞赛主题为{}. 您注册的手机号码为{}, 作为队长，您最多可邀请4名队员组队参加本项竞赛，队伍邀请码为{}. 请积极准备本次竞赛，预祝取得好成绩!".format(serializer.data['name'], competition_d[serializer.data['competition_id']], serializer.data['phone_number'], team.invite_code), "rscup2019@hotmail.com", [serializer.data["email"]], fail_silently=False)
                     except Exception as e:
                         #发送邮件失败注册信息全部删除
                         #只需要删除队伍信息即可，用户与队伍通过外键关联，删除队伍将删除对应的队员

@@ -32,7 +32,8 @@ def generate_leaderboard():
             #需要处理并列的情况
             team_results = team.result_set.all().order_by("-score")
             if len(team_results) > 0:
-                team_dic.append((team.team_name, team_results[0].score))
+                if team_results[0].score != -1 and team_results[0].score != -2:
+                    team_dic.append((team.team_name, team_results[0].score))
                 #if order == 1:
                 #    previous_score = team_results[0].score
                 #if previous_score != team_results[0].score:
