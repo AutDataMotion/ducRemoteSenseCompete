@@ -617,9 +617,9 @@ def count(request):
             return standard_response(status_code["not_login"], "目前尚未登录")   
 @api_view(["GET"])
 def statistics_all(request):
-    country = User.objects.values_list("country").annotate(Count("country"))
+    country = User.objects.filter(is_captain=1).values_list("country").annotate(Count("country"))
     country_size = len(country)
-    city = User.objects.values_list("city").annotate(Count("city"))
+    city = User.objects.filter(is_captain=1).values_list("city").annotate(Count("city"))
     city_size = len(city)
     team = Team.objects.all()
     team_size = len(team)
@@ -634,7 +634,7 @@ def statistics_country(request):
     
 @api_view(["GET"])
 def statistics_city(request):
-    city = User.objects.filter(is_captain=1).values("city").annotate(count=Count("city")).order_by('-count')
+    city = User.objects.filter(is_captain=1).filter(country="中国").values("city").annotate(count=Count("city")).order_by('-count')
     json_list = [{"rankNum": index + 1, "name":item["city"], "team_number":item["count"]} for index, item in enumerate(city)]
     
     return standard_response(status_code["ok"],"",{"cities":json_list})   
