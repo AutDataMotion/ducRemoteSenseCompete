@@ -96,7 +96,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'RSCompete.wsgi.application'
 SESSION_COOKIE_SAMESITE=None
-
+# SESSION_COOKIE_DOMAIN='rscup.bjxintong.com.cn'
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
@@ -108,7 +108,7 @@ DATABASES = {
         'NAME':'RSCompete',
         'USER':"RSAdmin",
         'PASSWORD':"xuan",
-        'HOST':"",
+        'HOST':"192.168.1.189",
         'PORT':"",
     }
 }

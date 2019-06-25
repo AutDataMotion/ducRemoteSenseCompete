@@ -1,7 +1,7 @@
 class System_Config():
     #在该类中进行系统设置
     #最好使用绝对路径
-    result_root_dir = "/data/results"
+    result_root_dir = "/bigdata/results"
     team_member_number = 5
     leader_board_root_dir = "/home/xuan/ducRemoteSenseCompete/leadboard"
     #scene_classification_gt = "/home/xuan/ducRemoteSenseCompete/NSFC_contest/scene_classification_gt"
