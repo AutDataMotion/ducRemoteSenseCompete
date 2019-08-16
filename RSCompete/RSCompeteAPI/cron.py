@@ -5,9 +5,31 @@ from RSCompeteAPI.default_settings import System_Config
 import os
 import json
 from datetime import datetime
+import shutil
 def test():
     with open("./test","w") as f:
         f.write("fuck you")
+def get_result():
+    leaderboard_root_dir = "/home/xuan/ducRemoteSenseCompete/leadboard"
+
+    competitions = Competition.objects.all()
+    for competition in competitions:
+        competition_id = competition.pk
+        file_path = os.path.join(leaderboard_root_dir, time.strftime("%Y-%m-%d", time.localtime()), str(competition_id), "leaderboard.json")
+        print(file_path)
+        with open(file_path,"r") as f:
+            file_jsondic = json.load(f)
+        results = file_jsondic["results"]
+        for result in results[:50]:
+            team_name = result['team_name']
+            score = result['score']
+            team = Team.objects.get(team_name=team_name)
+            result = team.result_set.all().order_by("-score")[0]
+            source_dir = result.root_dir
+            des_dir = "/data/top_result/{}/{}".format(competition_id, team.pk)
+            shutil.copytree(source_dir, des_dir)
+            # print(result.root_dir)
+            
 
 def generate_leaderboard():
     root_dir = System_Config.leader_board_root_dir

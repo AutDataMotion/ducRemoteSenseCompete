@@ -152,11 +152,11 @@ APPEND_SLASH=False
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/home/xuan/ducRemoteSenseCompete/static'
+STATIC_ROOT = '/data'
 #STATICFILES_DIRS = ("/home/xuan/ducRemoteSenseCompete/static") 
 
-CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> /home/xuan/crontab.log"),]
-
+CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> /home/xuan/crontab.log"), ('1 8 * * *', 'RSCompeteAPI.cron.get_result',">> /home/xuan/crontab.log")]
+# CRONJOBS = [('1 8 * * *', 'RSCompeteAPI.cron.generate_leaderboard',">> /home/xuan/crontab.log")]
 CELERY_RESULT_BACKEND = 'django-db'
 
 CELERY_BROKER_URL = 'amqp://RS:147258123@192.168.1.189:5672/RS_host'

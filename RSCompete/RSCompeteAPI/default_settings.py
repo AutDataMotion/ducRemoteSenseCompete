@@ -1,7 +1,7 @@
 class System_Config():
     #在该类中进行系统设置
     #最好使用绝对路径
-    result_root_dir = "/data/results"
+    result_root_dir = "/bigdata/results"
     team_member_number = 5
     leader_board_root_dir = "/home/xuan/ducRemoteSenseCompete/leadboard"
     #scene_classification_gt = "/home/xuan/ducRemoteSenseCompete/NSFC_contest/scene_classification_gt"
@@ -15,8 +15,10 @@ class System_Config():
     detection_test_image_path = "/data/detection/visualize_images"
     tracking_gt = "/data/Stage_1_groundtruth"    
     upload_count_perday = 0
+    upload_count_perday_all = 0
    # current_stage = "注册中" #目前的状态
-    current_stage = "数据发布"
+    # current_stage = "数据发布"
+    current_stage = "初赛"
     deadline = "2019/08/10"
 
     admin_username = "csu"

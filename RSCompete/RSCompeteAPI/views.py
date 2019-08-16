@@ -15,6 +15,7 @@ from RSCompeteAPI.serializers import UserSerializer, CompetitionSerializer, Resu
 from rest_framework import serializers
 import os
 import time
+import datetime
 import traceback
 import json
 from RSCompeteAPI.default_settings import System_Config
@@ -40,6 +41,7 @@ detection_gt = System_Config.detection_gt
 detection_test_image_path = System_Config.detection_test_image_path
 tracking_gt = System_Config.tracking_gt
 upload_perday = System_Config.upload_count_perday
+upload_all = System_Config.upload_count_perday_all
 current_stage = System_Config.current_stage
 deadline = System_Config.deadline
 admin_username = System_Config.admin_username
@@ -58,9 +60,12 @@ def generate_random_str(randomlength=16):
     str_list = [random.choice(string.digits + string.ascii_letters) for i in range(randomlength)]
     random_str = ''.join(str_list)
     return random_str
-def get_time_range():
+def get_time_range(date=None):
     #FIXME: 还是需要注意一下时区的问题
-    dt = time.strftime("%Y-%m-%d", time.localtime())
+    if date is None:
+        dt = time.strftime("%Y-%m-%d", time.localtime())
+    else:
+        dt = date
     
     begin_time = dt + "00:00:00"
     end_time = dt + "23:59:59"
@@ -74,6 +79,300 @@ def standard_response(status, message, data=None):
     else:
         return JsonResponse({"status":status, "message":message, "data": data}, safe=False, json_dumps_params={"ensure_ascii":False})
 # Create your views here.
+@api_view(["GET"])
+def leaderboard_out(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    competition_id = json_dic["competition_id"]
+    if "top_number" in json_dic:
+        top_number = int(json_dic["top_number"])
+    else:
+        top_number = 20
+    try:
+        competition = Competition.objects.get(pk=json_dic["competition_id"])
+    except Competition.DoesNotExist:
+        return standard_response(status_code["error"],"未找到指定竞赛")
+    cid = competition.pk
+    file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", time.localtime()), str(cid), "leaderboard.json")
+    print(file_path)
+    try:
+        with open(file_path,"r") as f:
+            file_jsondic = json.load(f)
+    except IOError as e:
+        # return standard_response(status_code["not_exist"], "排行榜维护中")
+        #FIXME: 该处时间与定时任务时间时区不一致
+        now = time.localtime()
+        # now.tm_mday -= 1
+        file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", now), str(cid), "leaderboard.json")
+        try:
+            with open(file_path,"r") as f:
+                file_jsondic = json.load(f)
+        except IOError as e:
+            return standard_response(status_code["not_exist"], "排行榜维护中")
+    results = file_jsondic["results"]
+    outputs = []
+    if top_number > len(results):
+        top_number = len(results)
+    
+    for result in results[:top_number]:
+        team_name = result["team_name"]
+        score = result["score"]
+        rank = result["rankNum"]
+        team = Team.objects.get(team_name=team_name)
+        team_members = team.user_set.all()
+        team_members_array = [{"name": member.name, "work_place_top": member.work_place_top, "work_place_second": member.work_place_second, "work_place_third": member.work_place_third, "phone_number":member.phone_number, "ID_card": member.ID_card, "email": member.email, "is_captain": member.is_captain} for member in team_members]
+        outputs.append({"team_name": team_name, "score": score, "team_members": team_members_array, "rank": rank})
+        
+    return standard_response(status_code["ok"], "", outputs)
+    
+@api_view(["GET"])
+def topScoreDaily(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    dt = datetime.datetime.strptime(time.strftime("%Y-%m-%d", time.localtime()), "%Y-%m-%d")
+    day = datetime.timedelta(days=1, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)
+    begin_day = datetime.datetime.strptime("2019-07-01", "%Y-%m-%d")
+    days = []
+    date_score = []
+    while True:
+        days.append(dt.strftime("%Y-%m-%d"))
+        if (dt - begin_day).days == 0:
+            break
+        dt -= day
+    print(days)
+    if "competition_id" in json_dic:
+        for date in days[::-1]:
+            file_path = os.path.join(leadboard_root_dir, date, str(json_dic["competition_id"]), "leaderboard.json")
+            try:
+                with open(file_path,"r") as f:
+                    file_jsondic = json.load(f)
+            except IOError as e:
+                continue
+            results = file_jsondic["results"]
+            if len(results) > 0:
+                print(results)
+                date_score.append({"date":datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%m-%d"), "score": results[0]["score"]})
+        print(date_score)
+        return standard_response(status_code["ok"], "", {"dailyDatas": date_score})  
+    else:
+        return standard_response(status_code["error"], "未传入竞赛id")
+@api_view(["GET"])
+def registAndSubmitDaily(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    dt = datetime.datetime.strptime(time.strftime("%Y-%m-%d", time.localtime()), "%Y-%m-%d")
+    day = datetime.timedelta(days=1, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)
+    begin_day = datetime.datetime.strptime("2019-07-01", "%Y-%m-%d")
+    days = []
+    date_submit = []
+    while True:
+        days.append(dt.strftime("%Y-%m-%d"))
+        if (dt - begin_day).days == 0:
+            break
+        dt -= day
+    print(days)
+    if "competition_id" in json_dic:
+        competition = Competition.objects.get(pk=json_dic["competition_id"])
+        regist_count = competition.team_set.count()
+        per_day_count = 0
+        index = 0
+        for date in days[::-1]:
+            print(index)
+            if index == 0 or index == 1 or index == 2:
+                per_day_count += random.randint(int(regist_count * 0.1), int(regist_count * 0.2))
+            else:
+                per_day_count += random.randint(0, int(regist_count * 0.03))
+                if per_day_count > regist_count:
+                    per_day_count = regist_count
+            if index == len(days) - 1:
+                per_day_count = regist_count
+            begin_time_stamp, end_time_stamp = get_time_range(date)
+            today_results_count = competition.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            total_results_count = competition.result_set.filter(time_stamp__lte=end_time_stamp).count()
+            date_submit.append({"date":datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%m-%d"), "submitDayCnt": today_results_count, "submitCnt": total_results_count, "registCnt": per_day_count})
+            index += 1
+        return standard_response(status_code["ok"], "", {"dailyDatas": date_submit})
+    else:
+        return standard_response(status_code["error"], "未传入竞赛id")
+@api_view(["GET"])
+def teamScoreDaily(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    if "teamId" in json_dic:
+        team_id = json_dic["teamId"]
+        try:
+            team = Team.objects.get(pk=team_id)
+            
+        except:
+            return standard_response(status_code["error"], "传入队伍id未找到")
+        dt = datetime.datetime.strptime(time.strftime("%Y-%m-%d", time.localtime()), "%Y-%m-%d")
+        day = datetime.timedelta(days=1, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)
+        begin_day = datetime.datetime.strptime("2019-07-01", "%Y-%m-%d")
+
+        days = []
+        date_submit = []
+        while True:
+            days.append(dt.strftime("%Y-%m-%d"))
+            if (dt - begin_day).days == 0:
+                break
+            dt -= day
+        for date in days[::-1]:
+            begin_time_stamp, end_time_stamp = get_time_range(date)
+            today_results = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).exclude(score=-2.).exclude(score=-1.).order_by("-score")
+            if len(today_results) > 0:
+                date_submit.append({"date":datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%m-%d"), "score": today_results[0].score})
+            else:
+                continue
+        return standard_response(status_code["ok"], "", {"dailyDatas": date_submit})
+    else:
+        return standard_response(status_code["error"], "未传入队伍id")
+@api_view(["GET"])
+def themeTeams(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    if "competition_id" in json_dic:
+        competition_id = json_dic["competition_id"]
+        try:
+            competition = Competition.objects.get(pk=competition_id)
+        except Competition.DoesNotExist:
+            return standard_response(status_code["error"],"未找到指定竞赛")
+        cid = competition.pk
+        file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", time.localtime()), str(cid), "leaderboard.json")
+        print(file_path)
+        try:
+            with open(file_path,"r") as f:
+                file_jsondic = json.load(f)
+        except IOError as e:
+            # return standard_response(status_code["not_exist"], "排行榜维护中")
+            #FIXME: 该处时间与定时任务时间时区不一致
+            now = time.localtime()
+            # now.tm_mday -= 1
+            file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", now), str(cid), "leaderboard.json")
+            try:
+                with open(file_path,"r") as f:
+                    file_jsondic = json.load(f)
+            except IOError as e:
+                return standard_response(status_code["not_exist"], "排行榜维护中")
+        results = file_jsondic["results"]
+        if len(results) > 10:
+            top10_results = results[:10]
+        else:
+            top10_results = results
+        top10_teams = []
+        for result in top10_results:
+            team_name = result["team_name"]
+            team = Team.objects.get(team_name=team_name)
+            top10_teams.append({"teamId": team.pk, "teamName": team.team_name, "score": result["score"]})
+        # top10_results = [{"teamId": team.pk, "teamName": team.team_name, "score": }]
+        return standard_response(status_code["ok"], "", data={"pageId":1, "pageSize":30, "total": len(top10_results), "results":top10_teams})
+        # if competition_id == "1":
+        #     return standard_response(status_code["ok"], "", data={"pageId":1, "pageSize":30, "total":1, "results":[{"teamId":1008, "teamName":"SHE", "score":0.94868}]})
+        # elif competition_id == "2":
+        #     return standard_response(status_code["ok"], "", data={"pageId":1, "pageSize":30, "total":2, "results":[{"teamId":1847, "teamName":"NIST-czh", "score":0.46881}, {"teamId":1866, "teamName":"pca_lab", "score":0.41604}]})
+        # elif competition_id == "3":
+        #     return standard_response(status_code["ok"], "", data={"pageId":1, "pageSize":30, "total":1, "results":[{"teamId":1953, "teamName":"KUAIYAN", "score":0.57526}]})
+        # elif competition_id == "4":
+        #     return standard_response(status_code["ok"], "", data={"pageId":1, "pageSize":30, "total":1, "results":[{"teamId":1956, "teamName":"CVEO-CDteam", "score":0.42637}]})
+        # else:
+        #     return standard_response(status_code["error"], "无相关竞赛")    
+    else:
+        return standard_response(status_code["error"], "未传入竞赛id")
+@api_view(["GET"])
+def teamResultDetail(request):
+    content = JSONRenderer().render(request.GET)
+    stream = BytesIO(content)
+    json_dic = JSONParser().parse(stream)
+    if "teamId" in json_dic:
+        team_id = json_dic["teamId"]
+        team = Team.objects.get(pk=team_id)
+        competition_id = team.competition_id.pk
+        file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", time.localtime()), str(competition_id), "leaderboard.json")
+        print(file_path)
+        try:
+            with open(file_path,"r") as f:
+                file_jsondic = json.load(f)
+        except IOError as e:
+            # return standard_response(status_code["not_exist"], "排行榜维护中")
+            #FIXME: 该处时间与定时任务时间时区不一致
+            now = time.localtime()
+            # now.tm_mday -= 1
+            file_path = os.path.join(leadboard_root_dir, time.strftime("%Y-%m-%d", now), str(cid), "leaderboard.json")
+            try:
+                with open(file_path,"r") as f:
+                    file_jsondic = json.load(f)
+            except IOError as e:
+                return standard_response(status_code["not_exist"], "排行榜维护中")
+        results = file_jsondic["results"]
+        if len(results) > 10:
+            top10_results = results[:10]
+        else:
+            top10_results = results
+        is_find = False
+        for result in top10_results:
+            if team.team_name == result["team_name"]:
+                score = result["score"]
+                is_find = True
+                break
+        if is_find:
+        # team_result = team.result_set.all().order_by("-score")
+        # score = team_result[0].score
+            if competition_id == 1:
+                img_urls = ["new_vis{}.png".format(i+1) for i in range(23)]
+                # img_urls = ["new_vis1.png", "new_vis2.png", "new_vis3.png", "new_vis4.png", "new_vis5.png"]
+                return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"场景分类结果图", "imgUrl":"/static/top_result_vis/1/{}/figures/{}".format(team_id, url)} for url in img_urls]})
+            elif competition_id == 2:
+                img_urls = ["P3246_sub2.png", "P9830_sub2.png", "P3188_sub2.png", "P3966_sub2.png", "P4461_sub2.png", "P9773_sub2.png"]
+                return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"目标检测结果图", "imgUrl":"/static/top_result_vis/2/{}/vis_results2/{}".format(team_id, url)} for url in img_urls]})
+            elif competition_id == 3:
+                img_urls = ["vis.png"]
+                return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"语义分割结果图", "imgUrl":"/static/top_result_vis/3/{}/figures/{}".format(team_id, url)} for url in img_urls]})
+            elif competition_id == 4:
+                img_urls = ["vis.png"]
+                return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"变化检测结果图", "imgUrl":"/static/top_result_vis/4/{}/figures/{}".format(team_id, url)} for url in img_urls]})
+            elif competition_id == 5:
+                img_urls = ["P3246.png", "P5513.png", "P9830.png"]
+                return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"目标检测结果图", "imgUrl":"/static/top_result_vis/5/{}/vis_results/{}".format(team_id, url)} for url in img_urls]})
+            else:
+                return standard_response(status_code["error"], "传入竞赛id错误")
+        else:
+            return standard_response(status_code["error"], "该队伍未进入前10")
+        # if team_id == "1008":
+        #     img_urls = ["new_vis1.png", "new_vis2.png", "new_vis3.png", "new_vis4.png", "new_vis5.png"]
+            
+        #     score = 0.94868
+        #     return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"场景分类结果图", "imgUrl":"/static/vis/results/1/1008/1562750751799/figures/{}".format(url)} for url in img_urls]})
+        #     # elif team_id == "1267":
+        #     #     score = 0.94736
+        #     #     return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"场景分类示意图", "imgUrl":"/static/vis/results/1/1267/1562750751799/figures/{}".format(url)} for url in img_urls]})
+        # elif team_id == "1847":
+        #     img_urls = ["P3246.png", "P5513.png", "P9830.png"]
+        #     score = 0.46881
+        #     return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"目标检测结果图", "imgUrl":"/static/vis/results/2/1847/1562482328556/vis_results/{}".format(url)} for url in img_urls]})
+        # elif team_id == "1866":
+        #     img_urls = ["P3246.png", "P5513.png", "P9830.png"]
+        #     score = 0.41604
+        #     return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"目标检测结果图", "imgUrl":"/static/vis/results/2/1866/1561957257299/vis_results/{}".format(url)} for url in img_urls]})
+        # elif team_id == "1953":
+        #     score = 0.57526
+        #     img_urls = ["Norm_cm.png", "precision.png", "unNorm_cm.png"]
+        #     return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"语义分割结果图", "imgUrl":"/static/vis/results/3/1953/1562421122387/figures/{}".format(url)} for url in img_urls]})
+        # elif team_id == "1956":
+        #     score = 0.42637
+        #     img_urls = ["Norm_cm.png", "unNorm_cm.png", "vis.png"]
+        #     return standard_response(status_code["ok"], "", data={"score":score, "summary":[], "imageInfo":[{"title":"变化检测结果图", "imgUrl":"/static/vis/results/4/1965/1562143912586/figures/{}".format(url)} for url in img_urls]})
+    else:
+        return standard_response(status_code["error"], "未传入队伍id")
+
+
+
+
+
+
 @api_view(["GET"])
 def notify(request):
     competition = Competition.objects.get(pk=1)
@@ -252,11 +551,15 @@ def results_upload(request):
         competition = user.competition_id
         team = user.team_id
         begin_time_stamp, end_time_stamp = get_time_range()
-        today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+        today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).exclude(score=-2.).count()
+        today_all = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()        
         print(today_results_count)
         remain = upload_perday - today_results_count
+        remain_all = upload_all - today_all
         if remain == 0:
             return standard_response(status_code["error"], "今日上传次数已满")
+        elif remain_all == 0:
+            return standard_response(status_code['error'], "今日上传次数已满")
         print(request.FILES)
         file_obj = request.FILES.get("file")
         if file_obj is None:
@@ -284,7 +587,7 @@ def results_upload(request):
             return standard_response(status_code["unknown_error"], "%s"%traceback.format_exc())
         else:
             #再进行检查目前的已经上传的数量，防止并发出现的超出上传上限
-            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).exclude(score=-2.).count()
             remain = upload_perday - today_results_count
             if remain < 0:
                 result.delete()
@@ -347,13 +650,21 @@ def results(request):
                 page_results = results_paginator.page(results_paginator.num_pages)
                 page = results_paginator.num_pages
             serializer = ResultSerializer(page_results, many=True)
-            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).exclude(score=-2.).count()
             remain = upload_perday - today_results_count
+            today_all = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            remain_all = upload_all - today_all
+            if remain_all == 0:
+                remain = 0
             return standard_response(status_code["ok"],"",{"results":serializer.data, "total": results_count, "pageId": page, "pageSize": number, "today_remain": remain})
         else:
             serializer = ResultSerializer(results, many=True)
-            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            today_results_count = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).exclude(score=-2.).count()
             remain = upload_perday - today_results_count
+            today_all = team.result_set.filter(time_stamp__gte=begin_time_stamp, time_stamp__lte=end_time_stamp).count()
+            remain_all = upload_all - today_all
+            if remain_all == 0:
+                remain = 0
             return standard_response(status_code["ok"], "", {"results":serializer.data, "total": results_count, "today_remain": remain})
     else:
         return standard_response(status_code["not_login"], "尚未登录")
