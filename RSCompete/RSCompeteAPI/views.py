@@ -902,7 +902,7 @@ def count(request):
     if 'competition_id' in json_dic:
         try:
             competition = Competition.objects.get(pk=json_dic["competition_id"])
-        except Competiton.DoesNotExist:
+        except Competition.DoesNotExist:
             return standard_response(status_code["not_exist"], "指定的竞赛不存在")
         else:
             teams = competition.team_set.all()
